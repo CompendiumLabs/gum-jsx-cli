@@ -1,0 +1,22 @@
+{
+  "name": "gum-next-cli",
+  "version": "0.1.0",
+  "description": "Command-line rendering for gum-next.",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "gum": "src/cli.ts"
+  },
+  "scripts": {
+    "gum": "bun src/cli.ts",
+    "test": "bun test/cli.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "gum-next-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^7"
+  }
+}
