@@ -2,59 +2,47 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { extname } from 'node:path';
-import { spawnSync } from 'node:child_process';
-import { parseArgs } from 'node:util';
+import { Command, InvalidArgumentError, Option } from 'commander';
 import {
   evaluate, Svg, LayoutPass, exact, make_request, render_svg, inspect_fragment,
 } from 'gum-next-core';
+import { format_image } from './kitty';
 
-const HELP = `Usage: gum [file.jsx|-] [options]
-Read JSX from a file or stdin. Omitted viewport dimensions use source sizing or hug content.
+type CliOptions = {
+  format?: string;
+  output?: string;
+  width?: number;
+  height?: number;
+  ratio: number;
+  background?: string;
+  title?: string;
+  idPrefix: string;
+  stats?: boolean;
+};
 
-  -f, --format svg|png|tree|json   Output format (default: svg or output extension)
-  -o, --output file              Write output to a file instead of stdout
-      --width pixels            Set the viewport width
-      --height pixels           Set the viewport height
-      --ratio number            PNG sampling ratio (default: 1; uses rsvg-convert)
-      --background color        Paint the viewport background
-      --title text              Add an escaped SVG title
-      --id-prefix name          Prefix SVG definition IDs (default: gum)
-      --stats                   Print layout counters to stderr
-  -h, --help                    Show this help
-`;
+const formats = ['kitty', 'svg', 'png', 'tree', 'json'];
 
 // CLI sizes are explicit pixels; raster ratio is independent of the layout viewport.
-function number_option(value: string | undefined, name: string): number | undefined {
-  if (value === undefined) return undefined;
+function number_option(value: string, name: string): number {
   const number = value.trim() === '' ? NaN : Number(value);
   if (!Number.isFinite(number) || number < 0) {
-    throw new Error(`${name} must be nonnegative and finite`);
+    throw new InvalidArgumentError(`${name} must be nonnegative and finite`);
   }
   return number;
 }
 
-// The command owns I/O and rasterization. The library stays platform-neutral.
-function main(): void {
-  const { values, positionals } = parseArgs({
-    allowPositionals: true,
-    options: {
-      format: { type: 'string', short: 'f' }, output: { type: 'string', short: 'o' },
-      width: { type: 'string' }, height: { type: 'string' }, ratio: { type: 'string' },
-      background: { type: 'string' }, title: { type: 'string' },
-      'id-prefix': { type: 'string' }, stats: { type: 'boolean' },
-      help: { type: 'boolean', short: 'h' },
-    },
-  });
-  if (values.help) { process.stdout.write(HELP); return; }
-  if (positionals.length > 1) throw new Error('Expected at most one JSX file');
-  const width = number_option(values.width, 'width');
-  const height = number_option(values.height, 'height');
-  const ratio = number_option(values.ratio, 'ratio') ?? 1;
-  if (ratio === 0) throw new Error('ratio must be positive');
-  const format = values.format ?? (values.output ? extname(values.output).slice(1) : 'svg');
-  if (!['svg', 'png', 'tree', 'json'].includes(format)) throw new Error(`Unknown format: ${format}`);
+function ratio_option(value: string): number {
+  const ratio = number_option(value, 'ratio');
+  if (ratio === 0) throw new InvalidArgumentError('ratio must be positive');
+  return ratio;
+}
 
-  const file = positionals[0];
+// The command owns I/O; gum-next-png rasterizes the core's completed SVG.
+async function render(file: string | undefined, values: CliOptions): Promise<void> {
+  const { width, height, ratio } = values;
+  const format = values.format ?? (values.output ? extname(values.output).slice(1) : 'kitty');
+  if (!formats.includes(format)) throw new Error(`Unknown format: ${format}`);
+
   const code = readFileSync(!file || file === '-' ? 0 : file, 'utf8');
   let element = evaluate(code, { name: file ?? 'stdin.jsx' });
   if (!(element instanceof Svg)) element = new Svg({ children: element });
@@ -70,15 +58,12 @@ function main(): void {
   else if (format === 'json') output = JSON.stringify(fragment, null, 2) + '\n';
   else {
     output = render_svg(fragment, {
-      background: values.background, title: values.title, id_prefix: values['id-prefix'],
+      background: values.background, title: values.title, id_prefix: values.idPrefix,
     });
-    if (format === 'png') {
-      const raster = spawnSync('rsvg-convert', ['--format', 'png', '--zoom', String(ratio)], {
-        input: output, maxBuffer: 64 * 1024 * 1024,
-      });
-      if (raster.error) throw new Error('PNG output requires rsvg-convert', { cause: raster.error });
-      if (raster.status !== 0) throw new Error(raster.stderr.toString().trim());
-      output = raster.stdout;
+    if (format === 'png' || format === 'kitty') {
+      const { rasterize_svg } = await import('gum-next-png');
+      const png = rasterize_svg(output, { size: fragment.size, ratio });
+      output = format === 'kitty' ? format_image(png) + '\n' : png;
     } else output += '\n';
   }
   if (values.output) writeFileSync(values.output, output);
@@ -86,8 +71,25 @@ function main(): void {
   if (values.stats) console.error(JSON.stringify(pass.stats));
 }
 
+// Commander owns option parsing, validation errors, and generated help.
+const program = new Command()
+  .name('gum')
+  .description('Read JSX from a file or stdin. Omitted viewport dimensions use source sizing or hug content.')
+  .argument('[file]', 'JSX file (omit or use - for stdin)')
+  .addOption(new Option('-f, --format <format>', 'Output format (default: kitty or output extension)')
+    .choices(formats))
+  .option('-o, --output <file>', 'Write output to a file instead of stdout')
+  .option('-W, --width <pixels>', 'Set the viewport width', value => number_option(value, 'width'))
+  .option('-H, --height <pixels>', 'Set the viewport height', value => number_option(value, 'height'))
+  .option('--ratio <number>', 'PNG/kitty sampling ratio', ratio_option, 1)
+  .option('--background <color>', 'Paint the viewport background')
+  .option('--title <text>', 'Add an escaped SVG title')
+  .option('--id-prefix <name>', 'Prefix SVG definition IDs', 'gum')
+  .option('--stats', 'Print layout counters to stderr')
+  .action(render);
+
 try {
-  main();
+  await program.parseAsync();
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;

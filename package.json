@@ -4,16 +4,18 @@
   "description": "Command-line rendering for gum-next.",
   "type": "module",
   "private": true,
+  "license": "MIT",
   "bin": {
     "gum": "src/cli.ts"
   },
   "scripts": {
     "gum": "bun src/cli.ts",
-    "test": "bun test/cli.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "gum-next-core": "workspace:*"
+    "commander": "^14.0.3",
+    "gum-next-core": "workspace:*",
+    "gum-next-png": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",
