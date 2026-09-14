@@ -12,11 +12,11 @@ From the workspace root:
 ```sh
 bun install
 bun run gum --help
-bun run gum gum-next-core/examples/hugging.jsx
-bun run gum gum-next-core/examples/hugging.jsx -f tree --stats
-bun run gum gum-next-core/examples/repeated.jsx -o /tmp/repeated.svg
-bun run gum gum-next-core/examples/card.jsx -W 220 -o /tmp/card.png --ratio 2
-bun run gum gum-next-core/examples/group.jsx -W 640 -H 320
+bun run gum gum-next-docs/elements/code/Frame.jsx
+bun run gum gum-next-docs/elements/code/Frame.jsx -f tree --stats
+bun run gum gum-next-docs/topics/code/repeated.jsx -o /tmp/repeated.svg
+bun run gum gum-next-docs/elements/code/Box.jsx -W 220 -o /tmp/card.png --ratio 2
+bun run gum gum-next-docs/elements/code/Group.jsx -W 640 -H 320
 printf '%s\n' '<Square width={px(40)} fill="tomato"/>' | bun run gum -f svg
 ```
 
