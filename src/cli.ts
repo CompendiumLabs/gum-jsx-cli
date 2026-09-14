@@ -7,6 +7,7 @@ import {
   evaluate, Svg, LayoutPass, exact, make_request, render_svg, inspect_fragment,
 } from 'gum-next-core'
 import { format_image } from './kitty'
+import * as math from 'gum-next-math'
 
 type CliOptions = {
   format?: string
@@ -44,13 +45,14 @@ async function render(file: string | undefined, values: CliOptions): Promise<voi
   if (!formats.includes(format)) throw new Error(`Unknown format: ${format}`)
 
   const code = readFileSync(!file || file === '-' ? 0 : file, 'utf8')
-  let element = evaluate(code, { name: file ?? 'stdin.jsx' })
+  let element = evaluate(code, { name: file ?? 'stdin.jsx', scope: math })
   if (!(element instanceof Svg)) element = new Svg({ children: element })
   const request = make_request({
     ...(width === undefined ? {} : { width: exact(width) }),
     ...(height === undefined ? {} : { height: exact(height) }),
   })
-  const pass = new LayoutPass()
+  const fonts = math.createMathFonts()
+  const pass = new LayoutPass({ fonts: { value: fonts, version: fonts.version } })
   const fragment = pass.layout(element, request)
 
   let output: string | Buffer

@@ -15,6 +15,7 @@
   "dependencies": {
     "commander": "^14.0.3",
     "gum-next-core": "workspace:*",
+    "gum-next-math": "workspace:*",
     "gum-next-png": "workspace:*"
   },
   "devDependencies": {
