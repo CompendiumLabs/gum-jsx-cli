@@ -6,11 +6,14 @@
   "private": true,
   "license": "MIT",
   "bin": {
-    "gum": "src/cli.ts"
+    "gum": "src/cli.ts",
+    "gum-tex": "src/tex.ts"
   },
   "scripts": {
     "gum": "bun src/cli.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "gum-tex": "bun src/tex.ts",
+    "test": "bun test"
   },
   "dependencies": {
     "commander": "^14.0.3",
