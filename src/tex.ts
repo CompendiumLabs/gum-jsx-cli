@@ -32,18 +32,18 @@ const program = output_options(new Command()
   .description('Render a TeX formula. Natural exports include the formula’s logical box and visible ink.')
   .argument('[tex]', 'Literal TeX (omit or use - for stdin)'))
   .option('-i, --input <file>', 'Read TeX from a file (- for stdin)')
-  .option('-S, --font-size <pixels>', 'Font size in pixels', value => {
+  .option('-s, --font-size <pixels>', 'Font size in pixels', value => {
     const size = number_option(value, 'font size')
     if (size === 0) throw new InvalidArgumentError('font size must be positive')
     return size
-  }, 24)
+  }, 64)
   .option('-p, --padding <em>', 'Padding on each side in em', value => number_option(value, 'padding'), 0)
+  .option('-c, --color <color>', 'Formula color', 'white')
   .option('--inline', 'Use text style instead of display style')
   .option('--no-strut', 'Omit the minimum formula line box')
-  .option('--color <color>', 'Formula color')
   .option('--macro <command=tex>', 'Define a macro (repeatable)', macro_option, {})
   .option('--fit', 'Uniformly fit into --width/--height instead of clipping at the original font size')
-  .addHelpText('after', '\nExamples:\n  gum-tex "x^2" -o formula.svg\n  gum-tex -i formula.tex -S 48 -p 0.25 -o formula.png\n  gum-tex "x^2" --fit -W 320\n')
+  .addHelpText('after', '\nExamples:\n  gum-tex "x^2" -o formula.svg\n  gum-tex -i formula.tex -s 48 -p 0.25 -o formula.png\n  gum-tex "x^2" --fit -W 320\n')
   .action(async (tex: string | undefined, values: TexOptions) => {
     if (values.input !== undefined && tex !== undefined) throw new Error('Use literal TeX or --input, not both')
     if (values.fit && values.width === undefined && values.height === undefined) {
