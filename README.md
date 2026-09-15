@@ -1,11 +1,11 @@
-# gum-next-cli
+# gum-jsx-cli
 
 The Bun command-line interface for Gum. `gum` reads JSX and `gum-tex` reads TeX.
 It lays out the
 result, and displays it with kitty graphics by default. SVG, PNG, fragment-tree,
 and JSON output are also available. Commander supplies argument parsing and
 generated help. File and terminal I/O live here; evaluation, layout, SVG serialization, and fragment
-inspection use the core's public API. [gum-next-png](../gum-next-png/README.md)
+inspection use the core's public API. [gum-jsx-png](../gum-jsx-png/README.md)
 provides PNG conversion through node-canvas.
 
 From the workspace root:
@@ -13,11 +13,11 @@ From the workspace root:
 ```sh
 bun install
 bun run gum --help
-bun run gum gum-next-docs/elements/code/Frame.jsx
-bun run gum gum-next-docs/elements/code/Frame.jsx -f tree --stats
-bun run gum gum-next-docs/topics/code/repeated.jsx -o /tmp/repeated.svg
-bun run gum gum-next-docs/elements/code/Box.jsx -W 220 -o /tmp/card.png --ratio 2
-bun run gum gum-next-docs/elements/code/Group.jsx -W 640 -H 320
+bun run gum gum-jsx-docs/elements/code/Frame.jsx
+bun run gum gum-jsx-docs/elements/code/Frame.jsx -f tree --stats
+bun run gum gum-jsx-docs/topics/code/repeated.jsx -o /tmp/repeated.svg
+bun run gum gum-jsx-docs/elements/code/Box.jsx -W 220 -o /tmp/card.png --ratio 2
+bun run gum gum-jsx-docs/elements/code/Group.jsx -W 640 -H 320
 printf '%s\n' '<Square width={px(40)} fill="tomato"/>' | bun run gum -f svg
 ```
 
@@ -68,9 +68,9 @@ An explicit root `<Svg theme="light|dark">` overrides that default, and
 colors in JSX still apply. Themes do not specify backgrounds. `--background`
 paints a backdrop at render time; omit it for transparency. Explicit backgrounds
 in JSX still apply and paint over the render backdrop. See
-[Themes](../gum-next-docs/topics/text/Themes.md) for palettes and semantic paints.
+[Themes](../gum-jsx-docs/topics/text/Themes.md) for palettes and semantic paints.
 
-PNG and kitty use the workspace's node-canvas dependency through `gum-next-png`,
+PNG and kitty use the workspace's node-canvas dependency through `gum-jsx-png`,
 loaded only for these formats. Text is already SVG glyph paths, so no font
 registration is needed.
 Errors go to stderr and exit with status 1. For machine-readable
@@ -84,14 +84,14 @@ workspace test command.
 ## Visual test report
 
 From the workspace root, `bun run visual-test` evaluates every element and topic
-example in `gum-next-docs` plus its focused visual regression cases. It checks for
+example in `gum-jsx-docs` plus its focused visual regression cases. It checks for
 evaluation/layout failures, empty viewports, non-finite SVG geometry, and empty
 drawings, then writes a searchable, self-contained report to
-`gum-next-cli/visual-report/dist/index.html`. The report includes each SVG, its
+`gum-jsx-cli/visual-report/dist/index.html`. The report includes each SVG, its
 source, dimensions, timing, status filters, deep links, and light/dark page chrome.
 
 `bun run visual-report` is an alias. The HTML opens directly from disk; for an HTTP
-preview, run `bun --filter gum-next-cli visual-report:serve`. Pass
+preview, run `bun --filter gum-jsx-cli visual-report:serve`. Pass
 `--output /some/directory` after the package script to change the generated output
 directory. The checked-in report notes are in
 [visual-report/README.md](./visual-report/README.md).
@@ -134,7 +134,7 @@ All output options above apply to both commands. TeX adds:
 | `--macro <command=tex>` | Repeatable definition, such as `'\RR=\mathbb{R}'`. |
 | `--fit` | Uniformly fit the completed formula into `-W` and/or `-H`. |
 
-Natural exports use `mathToElement` from `gum-next-math`: logical space and all
+Natural exports use `mathToElement` from `gum-jsx-math`: logical space and all
 visible ink are included, with negative extents translated into the viewport.
 Empty axes have a one-pixel floor. This preserves italic overhang, accents,
 laps, and smashed ink without changing their typographic advance inside other
@@ -146,5 +146,5 @@ Font size controls typography. `-W` / `-H` alone change the clipping viewport;
 layout path and TeX source range when available; malformed and unsupported TeX
 exit with status 1. No JavaScript evaluation is used for TeX input.
 
-See the [standalone export guide](../gum-next-docs/topics/text/MathExport.md) for
+See the [standalone export guide](../gum-jsx-docs/topics/text/MathExport.md) for
 synchronous/asynchronous library helpers and font-resource ownership.
