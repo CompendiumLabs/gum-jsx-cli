@@ -38,12 +38,12 @@ const program = output_options(new Command()
     return size
   }, 64)
   .option('-p, --padding <em>', 'Padding on each side in em', value => number_option(value, 'padding'), 0)
-  .option('-c, --color <color>', 'Formula color', 'white')
+  .option('-c, --color <color>', 'Formula color (default: theme foreground)')
   .option('--inline', 'Use text style instead of display style')
   .option('--no-strut', 'Omit the minimum formula line box')
   .option('--macro <command=tex>', 'Define a macro (repeatable)', macro_option, {})
   .option('--fit', 'Uniformly fit into --width/--height instead of clipping at the original font size')
-  .addHelpText('after', '\nExamples:\n  gum-tex "x^2" -o formula.svg\n  gum-tex -i formula.tex -s 48 -p 0.25 -o formula.png\n  gum-tex "x^2" --fit -W 320\n')
+  .addHelpText('after', '\nExamples:\n  gum-tex "x^2" -o formula.svg\n  gum-tex "x^2" --theme dark\n  gum-tex "x^2" --theme light --background white -o formula.png\n  gum-tex -i formula.tex -s 48 -p 0.25 -o formula.png\n  gum-tex "x^2" --fit -W 320\n')
   .action(async (tex: string | undefined, values: TexOptions) => {
     if (values.input !== undefined && tex !== undefined) throw new Error('Use literal TeX or --input, not both')
     if (values.fit && values.width === undefined && values.height === undefined) {

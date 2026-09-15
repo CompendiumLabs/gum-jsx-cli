@@ -39,6 +39,7 @@ Options:
   -H, --height <pixels>  Set the viewport height
   --ratio <number>       PNG/kitty sampling ratio (default: 1)
   --background <color>   Paint the viewport background
+  --theme <theme>        light or dark (default: source theme, or dark for kitty / light otherwise)
   --title <text>         Add an escaped SVG title
   --id-prefix <name>     Prefix SVG definition IDs (default: "gum")
   --stats                Print layout counters to stderr
@@ -60,6 +61,14 @@ stdout, or `-o figure.svg` / `-o figure.png` to select a file format automatical
 Kitty output displays inline in terminals that support the kitty graphics
 protocol and ends with a newline. An explicit `-f kitty` or an output filename
 ending in `.kitty` writes the same graphics sequence.
+
+Rendering defaults to dark for kitty and light for SVG, PNG, tree, and JSON.
+An explicit root `<Svg theme="light|dark">` overrides that default, and
+`--theme light|dark` overrides the source root theme. Nested themes and explicit
+colors in JSX still apply. Themes do not specify backgrounds. `--background`
+paints a backdrop at render time; omit it for transparency. Explicit backgrounds
+in JSX still apply and paint over the render backdrop. See
+[Themes](../gum-next-docs/topics/text/Themes.md) for palettes and semantic paints.
 
 PNG and kitty use the workspace's node-canvas dependency through `gum-next-png`,
 loaded only for these formats. Text is already SVG glyph paths, so no font
@@ -91,7 +100,7 @@ The protocol encoders in [src/kitty.ts](./src/kitty.ts) accept PNG or raw RGBA
 data, with image/placement IDs, terminal columns/rows, cursor movement, and
 virtual-placement controls. Unicode placeholder text generation is still pending.
 
-PDF, watch mode, render themes, and deck workflows remain
+PDF, watch mode, and deck workflows remain
 tracked in [FEATURES.md](../docs/FEATURES.md#command-line-and-authoring-workflows).
 
 ## Standalone TeX
@@ -102,6 +111,8 @@ bun run gum-tex '\frac{a+b}{c+d}' -s 48 -p 0.25 -o /tmp/fraction.png --ratio 2
 bun run gum-tex -i formula.tex --inline -f tree --stats
 printf '%s\n' '\int_0^1 x^2\,dx=\frac13' | bun run gum-tex -f svg
 bun run gum-tex 'x^2' --fit -W 320
+bun run gum-tex 'x^2' --theme dark
+bun run gum-tex 'x^2' -t light --background white -o /tmp/formula.png
 bun run gum-tex --help
 ```
 
@@ -119,7 +130,7 @@ All output options above apply to both commands. TeX adds:
 | `-p, --padding <em>` | Nonnegative padding on each side, default `0`. |
 | `--inline` | Text style; the default is display style. |
 | `--no-strut` | Omit the minimum formula line box. |
-| `--color <color>` | Formula color, default white. |
+| `--color <color>` | Formula color, default theme foreground (white for dark, black for light). |
 | `--macro <command=tex>` | Repeatable definition, such as `'\RR=\mathbb{R}'`. |
 | `--fit` | Uniformly fit the completed formula into `-W` and/or `-H`. |
 

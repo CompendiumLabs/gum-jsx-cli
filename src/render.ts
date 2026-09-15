@@ -2,7 +2,7 @@ import { writeFileSync } from 'node:fs'
 import { extname } from 'node:path'
 import { Command, InvalidArgumentError, Option } from 'commander'
 import { Svg, LayoutPass, exact, make_request, render_svg, inspect_fragment } from 'gum-next-core'
-import type { Element } from 'gum-next-core'
+import type { Element, ThemeName } from 'gum-next-core'
 import { createMathFonts } from 'gum-next-math'
 import { format_image } from './kitty'
 
@@ -13,6 +13,7 @@ type RenderOptions = {
   height?: number
   ratio: number
   background?: string
+  theme?: ThemeName
   title?: string
   idPrefix: string
   stats?: boolean
@@ -40,7 +41,11 @@ async function render(element: Element, values: RenderOptions): Promise<void> {
   const { width, height, ratio } = values
   const format = values.format ?? (values.output ? extname(values.output).slice(1) : 'kitty')
   if (!formats.includes(format)) throw new Error(`Unknown format: ${format}`)
-  if (!(element instanceof Svg)) element = new Svg({ children: element })
+  const viewport = element instanceof Svg ? element : new Svg({ children: element })
+  element = new Svg(viewport.type, {
+    ...viewport.props,
+    theme: values.theme ?? viewport.props.theme ?? (format === 'kitty' ? 'dark' : 'light'),
+  })
   const request = make_request({
     ...(width === undefined ? {} : { width: exact(width) }),
     ...(height === undefined ? {} : { height: exact(height) }),
@@ -76,6 +81,8 @@ function output_options(program: Command): Command {
     .option('-H, --height <pixels>', 'Set the viewport height', value => number_option(value, 'height'))
     .option('-r, --ratio <number>', 'PNG/kitty sampling ratio', ratio_option, 1)
     .option('-b, --background <color>', 'Paint the viewport background')
+    .addOption(new Option('-t, --theme <theme>', 'Render theme (default: source theme, or dark for kitty / light otherwise)')
+      .choices(['light', 'dark']))
     .option('--title <text>', 'Add an escaped SVG title')
     .option('--id-prefix <name>', 'Prefix SVG definition IDs', 'gum')
     .option('--stats', 'Print layout counters to stderr')
