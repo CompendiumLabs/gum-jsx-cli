@@ -72,18 +72,33 @@ Run `bun run typecheck` here to check the CLI, or from the workspace root to
 check all packages. Run `bun test` here for command integration tests, also included in the
 workspace test command.
 
+## Visual test report
+
+From the workspace root, `bun run visual-test` evaluates every element and topic
+example in `gum-next-docs` plus its focused visual regression cases. It checks for
+evaluation/layout failures, empty viewports, non-finite SVG geometry, and empty
+drawings, then writes a searchable, self-contained report to
+`gum-next-cli/visual-report/dist/index.html`. The report includes each SVG, its
+source, dimensions, timing, status filters, deep links, and light/dark page chrome.
+
+`bun run visual-report` is an alias. The HTML opens directly from disk; for an HTTP
+preview, run `bun --filter gum-next-cli visual-report:serve`. Pass
+`--output /some/directory` after the package script to change the generated output
+directory. The checked-in report notes are in
+[visual-report/README.md](./visual-report/README.md).
+
 The protocol encoders in [src/kitty.ts](./src/kitty.ts) accept PNG or raw RGBA
 data, with image/placement IDs, terminal columns/rows, cursor movement, and
 virtual-placement controls. Unicode placeholder text generation is still pending.
 
-PDF, watch mode, themes, and deck workflows remain
+PDF, watch mode, render themes, and deck workflows remain
 tracked in [FEATURES.md](../docs/FEATURES.md#command-line-and-authoring-workflows).
 
 ## Standalone TeX
 
 ```sh
 bun run gum-tex 'e^{i\pi}+1=0' -o /tmp/euler.svg
-bun run gum-tex '\frac{a+b}{c+d}' -S 48 -p 0.25 -o /tmp/fraction.png --ratio 2
+bun run gum-tex '\frac{a+b}{c+d}' -s 48 -p 0.25 -o /tmp/fraction.png --ratio 2
 bun run gum-tex -i formula.tex --inline -f tree --stats
 printf '%s\n' '\int_0^1 x^2\,dx=\frac13' | bun run gum-tex -f svg
 bun run gum-tex 'x^2' --fit -W 320
@@ -100,11 +115,11 @@ All output options above apply to both commands. TeX adds:
 
 | Option | Meaning |
 |---|---|
-| `-S, --font-size <pixels>` | Positive base em, default `24`. |
+| `-s, --font-size <pixels>` | Positive base em, default `64`. |
 | `-p, --padding <em>` | Nonnegative padding on each side, default `0`. |
 | `--inline` | Text style; the default is display style. |
 | `--no-strut` | Omit the minimum formula line box. |
-| `--color <color>` | Formula color, default black. |
+| `--color <color>` | Formula color, default white. |
 | `--macro <command=tex>` | Repeatable definition, such as `'\RR=\mathbb{R}'`. |
 | `--fit` | Uniformly fit the completed formula into `-W` and/or `-H`. |
 

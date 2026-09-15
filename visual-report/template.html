@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>gum-next visual test report</title>
+  <style>
+    :root { color-scheme: light; --page:#f4f5f7; --panel:#fff; --ink:#17202a; --muted:#667085; --line:#d0d5dd; --code:#f8fafc; --accent:#175cd3; }
+    :root.dark { color-scheme: dark; --page:#111315; --panel:#1b1e22; --ink:#eaecf0; --muted:#98a2b3; --line:#343a40; --code:#101214; --accent:#84adff; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--page); color:var(--ink); font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif; }
+    header { position:sticky; top:0; z-index:2; padding:18px 28px; background:color-mix(in srgb,var(--page) 92%,transparent); border-bottom:1px solid var(--line); backdrop-filter:blur(10px); }
+    .top { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+    h1 { margin:0 auto 0 0; font-size:20px; }
+    input,select,button { border:1px solid var(--line); border-radius:7px; background:var(--panel); color:var(--ink); padding:7px 10px; font:inherit; }
+    button,.card { cursor:pointer; }
+    .summary { margin-top:8px; color:var(--muted); }
+    .pass-text { color:#079455; }.fail-text { color:#d92d20; }
+    main { padding:8px 28px 40px; }
+    section h2 { margin:26px 0 10px; padding-bottom:5px; border-bottom:1px solid var(--line); font:600 15px ui-monospace,monospace; }
+    .count { color:var(--muted); font-weight:400; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px; }
+    .card { display:flex; min-width:0; aspect-ratio:1; flex-direction:column; overflow:hidden; border:1px solid var(--line); border-radius:10px; background:var(--panel); text-align:left; padding:0; }
+    .card:hover { border-color:var(--muted); transform:translateY(-1px); }
+    .card.fail { border-color:#f04438; }
+    .card-head { display:flex; align-items:center; gap:8px; padding:9px 11px; border-bottom:1px solid var(--line); }
+    .name { overflow:hidden; flex:1; text-overflow:ellipsis; white-space:nowrap; font:13px ui-monospace,monospace; }
+    .chip { border-radius:999px; padding:2px 7px; background:var(--page); color:var(--muted); font-size:11px; font-weight:700; text-transform:uppercase; }
+    .chip.pass { color:#067647; background:#dcfae6; }.chip.fail { color:#b42318; background:#fee4e2; }
+    .figure { min-height:0; flex:1; display:flex; align-items:center; justify-content:center; padding:14px; background:#fff; }
+    .figure svg { display:block; width:100%; height:100%; }
+    .failure { overflow:auto; width:100%; align-self:stretch; padding:14px; color:#b42318; background:#fff5f4; font:12px/1.45 ui-monospace,monospace; white-space:pre-wrap; }
+    dialog { width:min(1180px,92vw); height:min(760px,86vh); padding:0; border:1px solid var(--line); border-radius:12px; background:var(--panel); color:var(--ink); box-shadow:0 24px 80px #0008; }
+    dialog::backdrop { background:#0009; backdrop-filter:blur(2px); }
+    .dialog-head { display:flex; align-items:center; gap:10px; padding:11px 15px; border-bottom:1px solid var(--line); }
+    .dialog-path { min-width:0; overflow:hidden; flex:1; text-overflow:ellipsis; white-space:nowrap; font:13px ui-monospace,monospace; }
+    .dialog-body { display:grid; grid-template-columns:1fr 1fr; gap:15px; height:calc(100% - 52px); padding:15px; }
+    .pane { display:flex; min-width:0; min-height:0; flex-direction:column; }
+    .pane h3 { margin:0 0 5px; color:var(--muted); font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
+    .render,.code { min-height:0; flex:1; overflow:auto; border:1px solid var(--line); border-radius:8px; }
+    .render { display:flex; align-items:center; justify-content:center; padding:14px; background:#fff; }.render svg { width:100%; height:100%; }
+    pre { margin:0; min-height:100%; padding:13px; background:var(--code); color:var(--ink); font:12px/1.5 ui-monospace,"SFMono-Regular",Consolas,monospace; white-space:pre; tab-size:2; }
+    .empty { padding:50px; color:var(--muted); text-align:center; }
+    @media (max-width:760px) { header,main{padding-left:14px;padding-right:14px}.dialog-body{grid-template-columns:1fr;overflow:auto}.pane{min-height:320px}dialog{height:92vh}.grid{grid-template-columns:1fr} }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="top">
+      <h1>gum-next visual test report</h1>
+      <input id="query" type="search" size="30" placeholder="filter name, path, code, error…">
+      <select id="group"><option value="">all groups</option></select>
+      <select id="status"><option value="">all results</option><option value="fail">failing</option><option value="pass">passing</option></select>
+      <button id="theme" type="button">dark</button>
+    </div>
+    <div id="summary" class="summary"></div>
+  </header>
+  <main id="main"></main>
+  <dialog id="dialog">
+    <div class="dialog-head"><span id="dialog-path" class="dialog-path"></span><span id="dialog-status" class="chip"></span><button id="close" type="button" aria-label="Close">×</button></div>
+    <div class="dialog-body">
+      <div class="pane"><h3>render</h3><div id="render" class="render"></div></div>
+      <div class="pane"><h3>source</h3><div class="code"><pre id="code"></pre></div></div>
+    </div>
+  </dialog>
+  <!--REPORT_DATA-->
+  <script>
+    const report = JSON.parse(document.querySelector('#report-data').textContent)
+    const byId = new Map(report.examples.map(example => [example.id, example]))
+    const main = document.querySelector('#main')
+    const query = document.querySelector('#query')
+    const group = document.querySelector('#group')
+    const status = document.querySelector('#status')
+    const dialog = document.querySelector('#dialog')
+    for (const name of report.groups) group.add(new Option(name, name))
+    document.querySelector('#summary').innerHTML = `<span class="pass-text">${report.passed} passed</span>, <span class="${report.failed ? 'fail-text' : ''}">${report.failed} failed</span> · ${report.examples.length} renders · ${(report.duration / 1000).toFixed(2)}s · generated ${report.generated.replace('T',' ').slice(0,19)}`
+
+    function escape(value) { const span=document.createElement('span'); span.textContent=value; return span.innerHTML }
+    function visible() {
+      const needle=query.value.trim().toLowerCase()
+      return report.examples.filter(example => (!group.value || example.group===group.value) && (!status.value || example.status===status.value) && (!needle || [example.name,example.path,example.code,example.error].join(' ').toLowerCase().includes(needle)))
+    }
+    function draw() {
+      const examples=visible(); main.textContent=''
+      for (const name of report.groups) {
+        const members=examples.filter(example => example.group===name); if (!members.length) continue
+        const section=document.createElement('section'); const failed=members.filter(example=>example.status==='fail').length
+        section.innerHTML=`<h2>${name} <span class="count">${members.length}${failed ? ` · ${failed} failing` : ''}</span></h2><div class="grid"></div>`
+        const grid=section.querySelector('.grid')
+        for (const example of members) {
+          const card=document.createElement('button'); card.type='button'; card.className=`card ${example.status}`; card.dataset.id=example.id
+          const dims=example.width ? `${Math.round(example.width)} × ${Math.round(example.height)}` : example.group
+          card.innerHTML=`<span class="card-head"><span class="name">${escape(example.name)}</span><span class="chip">${dims}</span><span class="chip ${example.status}">${example.status}</span></span><span class="figure">${example.svg || `<span class="failure">${escape(example.error || 'No render')}</span>`}</span>`
+          grid.append(card)
+        }
+        main.append(section)
+      }
+      if (!examples.length) main.innerHTML='<div class="empty">No examples match these filters.</div>'
+    }
+    function openExample(example) {
+      document.querySelector('#dialog-path').textContent=example.path
+      const chip=document.querySelector('#dialog-status'); chip.textContent=example.status; chip.className=`chip ${example.status}`
+      document.querySelector('#render').innerHTML=example.svg || `<div class="failure">${escape(example.error || 'No render')}</div>`
+      document.querySelector('#code').textContent=example.code.trim()
+      history.replaceState(null,'',`#${encodeURIComponent(example.id)}`); dialog.showModal()
+    }
+    main.addEventListener('click',event=>{ const card=event.target.closest('.card'); if(card) openExample(byId.get(card.dataset.id)) })
+    for (const input of [query,group,status]) input.addEventListener('input',draw)
+    document.querySelector('#close').addEventListener('click',()=>dialog.close())
+    dialog.addEventListener('click',event=>{ if(event.target===dialog) dialog.close() })
+    dialog.addEventListener('close',()=>history.replaceState(null,'',location.href.split('#')[0]))
+    const stored=localStorage.getItem('gum-next-report-theme'); if(stored==='dark') document.documentElement.classList.add('dark')
+    const theme=document.querySelector('#theme'); function themeLabel(){theme.textContent=document.documentElement.classList.contains('dark')?'light':'dark'} themeLabel()
+    theme.addEventListener('click',()=>{document.documentElement.classList.toggle('dark');localStorage.setItem('gum-next-report-theme',document.documentElement.classList.contains('dark')?'dark':'light');themeLabel()})
+    draw(); const active=byId.get(decodeURIComponent(location.hash.slice(1))); if(active) openExample(active)
+  </script>
+</body>
+</html>

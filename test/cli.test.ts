@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { px, em } from 'gum-next-core'
 import { mathToSvg } from 'gum-next-math'
 
+const texDefaults = { font_size: px(64), color: 'white' } as const
 const scratch = mkdtempSync(join(tmpdir(), 'gum-next-cli-'))
 afterAll(() => rmSync(scratch, { recursive: true, force: true }))
 async function cli(args: string[], input = '', entry = 'tex') {
@@ -27,7 +28,7 @@ test('gum-tex literal, file, and stdin match the library SVG', async () => {
   await Bun.write(join(scratch, 'formula.tex'), tex)
   const expected = mathToSvg(tex, { font_size: px(40), padding: em(0.25), color: 'navy' }) + '\n'
   for (const args of [[tex], ['-i', 'formula.tex'], [], ['-'], ['-i', '-']]) {
-    const result = await cli([...args, '-f', 'svg', '-S', '40', '-p', '0.25', '--color', 'navy'], tex)
+    const result = await cli([...args, '-f', 'svg', '-s', '40', '-p', '0.25', '--color', 'navy'], tex)
     expect(result.code).toBe(0)
     expect(result.error).toBe('')
     expect(result.text === expected).toBe(true)
@@ -41,7 +42,7 @@ test('gum-tex modes, macros, SVG metadata, and stats reach the shared renderer',
   expect(result.code).toBe(0)
   const expected = mathToSvg(tex, { inline: true, strut: false,
     macros: { '\\RR': String.raw`\mathbb{R}`, '\\f': String.raw`\frac{#1}{2}` },
-    title: 'A < B & C', background: 'white', id_prefix: 'tex' }) + '\n'
+    title: 'A < B & C', background: 'white', id_prefix: 'tex', ...texDefaults }) + '\n'
   expect(result.text === expected).toBe(true)
   expect(JSON.parse(result.error).layouts).toBeGreaterThan(0)
   const tree = await cli(['x^2', '-f', 'tree'])
@@ -54,7 +55,7 @@ test('gum-tex modes, macros, SVG metadata, and stats reach the shared renderer',
 
 test('PNG dimensions follow the fractional SVG viewport and kitty encodes the same PNG', async () => {
   const text = String.raw`\smash{\widehat{ABC}}`
-  const svg = mathToSvg(text, { strut: false })
+  const svg = mathToSvg(text, { strut: false, ...texDefaults })
   const [, width, height] = /width="([\d.]+)" height="([\d.]+)"/.exec(svg)!
   const png = await cli([text, '--no-strut', '-f', 'png', '--ratio', '2'])
   expect(png.code).toBe(0)
@@ -70,7 +71,7 @@ test('PNG dimensions follow the fractional SVG viewport and kitty encodes the sa
 
 test('output extensions and explicit formats work for file output', async () => {
   expect((await cli(['x', '-o', 'formula.svg'])).code).toBe(0)
-  expect(await Bun.file(join(scratch, 'formula.svg')).text()).toBe(mathToSvg('x') + '\n')
+  expect(await Bun.file(join(scratch, 'formula.svg')).text()).toBe(mathToSvg('x', texDefaults) + '\n')
   expect((await cli(['x', '-o', 'formula.png'])).code).toBe(0)
   png_size(new Uint8Array(await Bun.file(join(scratch, 'formula.png')).arrayBuffer()))
   expect((await cli(['x', '-o', 'override.png', '-f', 'svg'])).code).toBe(0)
@@ -95,7 +96,7 @@ test('errors return status 1 without output and help documents the input contrac
   const failures: [string[], string][] = [
     [['{', '-f', 'svg'], 'parse:'], [[String.raw`\phase{x}`, '-f', 'svg'], 'unsupported:'],
     [['x', '-i', 'formula.tex'], 'not both'], [['--fit', 'x'], 'requires'],
-    [['x', '-S', '0'], 'positive'], [['x', '-S', 'NaN'], 'finite'], [['x', '-p', '-1'], 'nonnegative'],
+    [['x', '-s', '0'], 'positive'], [['x', '-s', 'NaN'], 'finite'], [['x', '-p', '-1'], 'nonnegative'],
     [['x', '--macro', 'invalid'], 'macro must'], [['x', '--ratio', '0'], 'positive'],
     [['x', '-o', 'unknown.xyz'], 'Unknown format'], [['-i', 'missing.tex'], 'ENOENT'],
     [['x', '-W', '0', '-f', 'png'], 'positive'],

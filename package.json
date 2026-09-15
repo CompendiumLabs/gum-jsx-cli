@@ -13,7 +13,10 @@
     "gum": "bun src/cli.ts",
     "typecheck": "tsc --noEmit",
     "gum-tex": "bun src/tex.ts",
-    "test": "bun test"
+    "test": "bun test",
+    "visual-test": "bun scripts/visual-test.ts",
+    "visual-report": "bun scripts/visual-test.ts",
+    "visual-report:serve": "bun visual-report/serve.ts"
   },
   "dependencies": {
     "commander": "^14.0.3",
