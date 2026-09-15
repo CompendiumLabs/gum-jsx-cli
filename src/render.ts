@@ -1,9 +1,9 @@
 import { writeFileSync } from 'node:fs'
 import { extname } from 'node:path'
 import { Command, InvalidArgumentError, Option } from 'commander'
-import { Svg, LayoutPass, exact, make_request, render_svg, inspect_fragment } from 'gum-next-core'
-import type { Element, ThemeName } from 'gum-next-core'
-import { createMathFonts } from 'gum-next-math'
+import { Svg, LayoutPass, exact, make_request, render_svg, inspect_fragment } from 'gum-jsx-core'
+import type { Element, ThemeName } from 'gum-jsx-core'
+import { createMathFonts } from 'gum-jsx-math'
 import { format_image } from './kitty'
 
 type RenderOptions = {
@@ -62,7 +62,7 @@ async function render(element: Element, values: RenderOptions): Promise<void> {
       background: values.background, title: values.title, id_prefix: values.idPrefix,
     })
     if (format === 'png' || format === 'kitty') {
-      const { rasterize_svg } = await import('gum-next-png')
+      const { rasterize_svg } = await import('gum-jsx-png')
       const png = rasterize_svg(output, { size: fragment.size, ratio })
       output = format === 'kitty' ? format_image(png) + '\n' : png
     } else output += '\n'

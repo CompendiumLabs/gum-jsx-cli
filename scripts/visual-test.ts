@@ -2,15 +2,15 @@
 
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve } from 'node:path'
-import { evaluate, LayoutPass, render_svg, Svg } from 'gum-next-core'
-import * as math from 'gum-next-math'
-import { createMathFonts } from 'gum-next-math'
+import { evaluate, LayoutPass, render_svg, Svg } from 'gum-jsx-core'
+import * as math from 'gum-jsx-math'
+import { createMathFonts } from 'gum-jsx-math'
 import {
   elementsCodeDir,
   packageRoot as docsRoot,
   topicsCodeDir,
   visualTestsCodeDir,
-} from '../../gum-next-docs/src/dirs'
+} from '../../gum-jsx-docs/src/dirs'
 
 type Status = 'pass' | 'fail'
 

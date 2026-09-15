@@ -1,7 +1,7 @@
 {
   "name": "gum-jsx-cli",
   "version": "0.1.0",
-  "description": "Command-line rendering for gum-next.",
+  "description": "Command-line rendering for gum-jsx.",
   "type": "module",
   "private": true,
   "license": "MIT",
@@ -20,9 +20,9 @@
   },
   "dependencies": {
     "commander": "^14.0.3",
-    "gum-next-core": "workspace:*",
-    "gum-next-math": "workspace:*",
-    "gum-next-png": "workspace:*"
+    "gum-jsx-core": "workspace:*",
+    "gum-jsx-math": "workspace:*",
+    "gum-jsx-png": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",

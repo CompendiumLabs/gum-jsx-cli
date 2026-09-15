@@ -3,16 +3,16 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { px, em, THEMES } from 'gum-next-core'
-import type { Fragment } from 'gum-next-core'
-import { mathToSvg } from 'gum-next-math'
+import { px, em, THEMES } from 'gum-jsx-core'
+import type { Fragment } from 'gum-jsx-core'
+import { mathToSvg } from 'gum-jsx-math'
 
 const texDefaults = { font_size: px(64) } as const
 const exportSvg = mathToSvg
 function drawings(fragment: Fragment): Fragment['draw'][number][] {
   return [...fragment.draw, ...fragment.children.flatMap(child => drawings(child.fragment))]
 }
-const scratch = mkdtempSync(join(tmpdir(), 'gum-next-cli-'))
+const scratch = mkdtempSync(join(tmpdir(), 'gum-jsx-cli-'))
 afterAll(() => rmSync(scratch, { recursive: true, force: true }))
 async function cli(args: string[], input = '', entry = 'tex') {
   const child = Bun.spawn([process.execPath, fileURLToPath(new URL(`../src/${entry}.ts`, import.meta.url)), ...args], {

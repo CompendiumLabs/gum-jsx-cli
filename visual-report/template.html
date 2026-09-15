@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>gum-next visual test report</title>
+  <title>gum-jsx visual test report</title>
   <style>
     :root { color-scheme: light; --page:#f4f5f7; --panel:#fff; --ink:#17202a; --muted:#667085; --line:#d0d5dd; --code:#f8fafc; --accent:#175cd3; }
     :root.dark { color-scheme: dark; --page:#111315; --panel:#1b1e22; --ink:#eaecf0; --muted:#98a2b3; --line:#343a40; --code:#101214; --accent:#84adff; }
@@ -47,7 +47,7 @@
 <body>
   <header>
     <div class="top">
-      <h1>gum-next visual test report</h1>
+      <h1>gum-jsx visual test report</h1>
       <input id="query" type="search" size="30" placeholder="filter name, path, code, error…">
       <select id="group"><option value="">all groups</option></select>
       <select id="status"><option value="">all results</option><option value="fail">failing</option><option value="pass">passing</option></select>
@@ -109,9 +109,9 @@
     document.querySelector('#close').addEventListener('click',()=>dialog.close())
     dialog.addEventListener('click',event=>{ if(event.target===dialog) dialog.close() })
     dialog.addEventListener('close',()=>history.replaceState(null,'',location.href.split('#')[0]))
-    const stored=localStorage.getItem('gum-next-report-theme'); if(stored==='dark') document.documentElement.classList.add('dark')
+    const stored=localStorage.getItem('gum-jsx-report-theme'); if(stored==='dark') document.documentElement.classList.add('dark')
     const theme=document.querySelector('#theme'); function themeLabel(){theme.textContent=document.documentElement.classList.contains('dark')?'light':'dark'} themeLabel()
-    theme.addEventListener('click',()=>{document.documentElement.classList.toggle('dark');localStorage.setItem('gum-next-report-theme',document.documentElement.classList.contains('dark')?'dark':'light');themeLabel()})
+    theme.addEventListener('click',()=>{document.documentElement.classList.toggle('dark');localStorage.setItem('gum-jsx-report-theme',document.documentElement.classList.contains('dark')?'dark':'light');themeLabel()})
     draw(); const active=byId.get(decodeURIComponent(location.hash.slice(1))); if(active) openExample(active)
   </script>
 </body>
