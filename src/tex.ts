@@ -43,7 +43,7 @@ const program = output_options(new Command()
   .option('--no-strut', 'Omit the minimum formula line box')
   .option('--macro <command=tex>', 'Define a macro (repeatable)', macro_option, {})
   .option('--fit', 'Uniformly fit into --width/--height instead of clipping at the original font size')
-  .addHelpText('after', '\nExamples:\n  gum-tex "x^2" -o formula.svg\n  gum-tex "x^2" --theme dark\n  gum-tex "x^2" --theme light --background white -o formula.png\n  gum-tex -i formula.tex -s 48 -p 0.25 -o formula.png\n  gum-tex "x^2" --fit -W 320\n')
+  .addHelpText('after', '\nExamples:\n  gum-tex "x^2" -o formula.svg\n  gum-tex "x^2" -o formula.pdf\n  gum-tex "x^2" --theme dark\n  gum-tex "x^2" --theme light --background white -o formula.png\n  gum-tex -i formula.tex -s 48 -p 0.25 -o formula.png\n  gum-tex "x^2" --fit -W 320\n')
   .action(async (tex: string | undefined, values: TexOptions) => {
     if (values.input !== undefined && tex !== undefined) throw new Error('Use literal TeX or --input, not both')
     if (values.fit && values.width === undefined && values.height === undefined) {

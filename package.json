@@ -21,6 +21,7 @@
     "commander": "^14.0.3",
     "@gum-jsx/core": "workspace:*",
     "@gum-jsx/math": "workspace:*",
+    "@gum-jsx/pdf": "workspace:*",
     "@gum-jsx/png": "workspace:*"
   },
   "devDependencies": {

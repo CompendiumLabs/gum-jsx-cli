@@ -2,11 +2,12 @@
 
 The Bun command-line interface for Gum. `gum` reads JSX and `gum-tex` reads TeX.
 It lays out the
-result, and displays it with kitty graphics by default. SVG, PNG, fragment-tree,
+result, and displays it with kitty graphics by default. SVG, PNG, PDF, fragment-tree,
 and JSON output are also available. Commander supplies argument parsing and
 generated help. File and terminal I/O live here; evaluation, layout, SVG serialization, and fragment
 inspection use the core's public API. [gum-jsx-png](../gum-jsx-png/README.md)
-provides PNG conversion through node-canvas.
+provides PNG conversion through node-canvas; [gum-jsx-pdf](../gum-jsx-pdf/README.md)
+exports fragments directly to vector PDF.
 
 From the workspace root:
 
@@ -16,6 +17,7 @@ bun run gum --help
 bun run gum gum-jsx-docs/elements/code/Frame.jsx
 bun run gum gum-jsx-docs/elements/code/Frame.jsx -f tree --stats
 bun run gum gum-jsx-docs/topics/code/repeated.jsx -o /tmp/repeated.svg
+bun run gum gum-jsx-docs/topics/code/repeated.jsx -o /tmp/repeated.pdf
 bun run gum gum-jsx-docs/elements/code/Box.jsx -W 220 -o /tmp/card.png --ratio 2
 bun run gum gum-jsx-docs/elements/code/Group.jsx -W 640 -H 320
 printf '%s\n' '<Square width={px(40)} fill="tomato"/>' | bun run gum -f svg
@@ -33,14 +35,14 @@ Arguments:
 
 Options:
   -f, --format <format>  Output format (default: kitty or output extension)
-                         (choices: "kitty", "svg", "png", "tree", "json")
+                         (choices: "kitty", "svg", "png", "pdf", "tree", "json")
   -o, --output <file>    Write output to a file instead of stdout
   -W, --width <pixels>   Set the viewport width
   -H, --height <pixels>  Set the viewport height
   --ratio <number>       PNG/kitty sampling ratio (default: 1)
   --background <color>   Paint the viewport background
   --theme <theme>        light or dark (default: source theme, or dark for kitty / light otherwise)
-  --title <text>         Add an escaped SVG title
+  --title <text>         Set the SVG or PDF document title
   --id-prefix <name>     Prefix SVG definition IDs (default: "gum")
   --stats                Print layout counters to stderr
   -h, --help             display help for command
@@ -50,19 +52,20 @@ Omit the input file or use `-` to read stdin. A bare element is wrapped in `Svg`
 `-W` / `--width` and `-H` / `--height` are independent pixel overrides; `-h`
 remains the help shortcut. Omitted axes retain source
 sizing or hug the content. Zero is a valid viewport dimension for SVG, tree, and
-JSON; PNG and kitty require positive dimensions. The sampling ratio must be
+JSON; PNG, PDF, and kitty require positive dimensions. The sampling ratio must be
 positive and changes raster sampling without changing layout. Raster dimensions
 round up to whole pixels.
 
 An explicit format takes precedence over the output filename. Otherwise the
 output extension selects the format; stdout defaults to kitty, including when
 redirected or piped, matching the original gum command. Use `-f svg` for SVG on
-stdout, or `-o figure.svg` / `-o figure.png` to select a file format automatically.
+stdout, `-f pdf` for binary PDF on stdout, or `-o figure.svg` / `-o figure.png` /
+`-o figure.pdf` to select a file format automatically.
 Kitty output displays inline in terminals that support the kitty graphics
 protocol and ends with a newline. An explicit `-f kitty` or an output filename
 ending in `.kitty` writes the same graphics sequence.
 
-Rendering defaults to dark for kitty and light for SVG, PNG, tree, and JSON.
+Rendering defaults to dark for kitty and light for SVG, PNG, PDF, tree, and JSON.
 An explicit root `<Svg theme="light|dark">` overrides that default, and
 `--theme light|dark` overrides the source root theme. Nested themes and explicit
 colors in JSX still apply. Themes do not specify backgrounds. `--background`
@@ -73,6 +76,15 @@ in JSX still apply and paint over the render backdrop. See
 PNG and kitty use the workspace's node-canvas dependency through `gum-jsx-png`,
 loaded only for these formats. Text is already SVG glyph paths, so no font
 registration is needed.
+
+PDF uses `gum-jsx-pdf`, loaded only for this format. It writes a single vector
+page sized to the viewport at 96 pixels per inch (0.75 PDF points per pixel).
+`--ratio` and `--id-prefix` do not affect PDF output. Text and math remain
+outlines, so they are not searchable or selectable; debug overlays are omitted.
+`--title` sets PDF document metadata. Named, hex, RGB, and HSL colors are supported;
+unsupported paint expressions fail with an error. See the
+[PDF API documentation](../gum-jsx-pdf/README.md) for format limits.
+
 Errors go to stderr and exit with status 1. For machine-readable
 `--stats`, run the executable directly or use `bun run --silent gum` to suppress
 Bun's script announcement.
@@ -100,13 +112,14 @@ The protocol encoders in [src/kitty.ts](./src/kitty.ts) accept PNG or raw RGBA
 data, with image/placement IDs, terminal columns/rows, cursor movement, and
 virtual-placement controls. Unicode placeholder text generation is still pending.
 
-PDF, watch mode, and deck workflows remain
+Watch mode and deck workflows remain
 tracked in [FEATURES.md](../docs/FEATURES.md#command-line-and-authoring-workflows).
 
 ## Standalone TeX
 
 ```sh
 bun run gum-tex 'e^{i\pi}+1=0' -o /tmp/euler.svg
+bun run gum-tex 'e^{i\pi}+1=0' -o /tmp/euler.pdf
 bun run gum-tex '\frac{a+b}{c+d}' -s 48 -p 0.25 -o /tmp/fraction.png --ratio 2
 bun run gum-tex -i formula.tex --inline -f tree --stats
 printf '%s\n' '\int_0^1 x^2\,dx=\frac13' | bun run gum-tex -f svg
@@ -138,7 +151,7 @@ Natural exports use `mathToElement` from `gum-jsx-math`: logical space and all
 visible ink are included, with negative extents translated into the viewport.
 Empty axes have a one-pixel floor. This preserves italic overhang, accents,
 laps, and smashed ink without changing their typographic advance inside other
-layouts. Both commands then share layout, inspection, SVG, PNG, and kitty output.
+layouts. Both commands then share layout, inspection, SVG, PNG, PDF, and kitty output.
 
 Font size controls typography. `-W` / `-H` alone change the clipping viewport;
 `--fit` explicitly scales the formula and requires at least one dimension.

@@ -19,7 +19,7 @@ type RenderOptions = {
   stats?: boolean
 }
 
-const formats = ['kitty', 'svg', 'png', 'tree', 'json']
+const formats = ['kitty', 'svg', 'png', 'pdf', 'tree', 'json']
 
 // CLI sizes are explicit pixels; raster ratio is independent of the layout viewport.
 function number_option(value: string, name: string): number {
@@ -36,7 +36,7 @@ function ratio_option(value: string): number {
   return ratio
 }
 
-// Both authoring commands use one layout, serializer, and raster/terminal path.
+// Both authoring commands share layout and the selected export backend.
 async function render(element: Element, values: RenderOptions): Promise<void> {
   const { width, height, ratio } = values
   const format = values.format ?? (values.output ? extname(values.output).slice(1) : 'kitty')
@@ -54,9 +54,13 @@ async function render(element: Element, values: RenderOptions): Promise<void> {
   const pass = new LayoutPass({ fonts: { value: fonts, version: fonts.version } })
   const fragment = pass.layout(element, request)
 
-  let output: string | Buffer
+  let output: string | Uint8Array
   if (format === 'tree') output = inspect_fragment(fragment) + '\n'
   else if (format === 'json') output = JSON.stringify(fragment, null, 2) + '\n'
+  else if (format === 'pdf') {
+    const { render_pdf } = await import('@gum-jsx/pdf')
+    output = render_pdf(fragment, { background: values.background, title: values.title })
+  }
   else {
     output = render_svg(fragment, {
       background: values.background, title: values.title, id_prefix: values.idPrefix,
@@ -83,7 +87,7 @@ function output_options(program: Command): Command {
     .option('-b, --background <color>', 'Paint the viewport background')
     .addOption(new Option('-t, --theme <theme>', 'Render theme (default: source theme, or dark for kitty / light otherwise)')
       .choices(['light', 'dark']))
-    .option('--title <text>', 'Add an escaped SVG title')
+    .option('--title <text>', 'Set the SVG or PDF document title')
     .option('--id-prefix <name>', 'Prefix SVG definition IDs', 'gum')
     .option('--stats', 'Print layout counters to stderr')
 }

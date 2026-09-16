@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { px, em, THEMES } from 'gum-jsx-core'
 import type { Fragment } from 'gum-jsx-core'
 import { mathToSvg } from 'gum-jsx-math'
+import { render_pdf } from '@gum-jsx/pdf'
 
 const texDefaults = { font_size: px(64) } as const
 const exportSvg = mathToSvg
@@ -81,6 +82,73 @@ test('output extensions and explicit formats work for file output', async () => 
   png_size(new Uint8Array(await Bun.file(join(scratch, 'formula.png')).arrayBuffer()))
   expect((await cli(['x', '-o', 'override.png', '-f', 'svg'])).code).toBe(0)
   expect((await Bun.file(join(scratch, 'override.png')).text()).startsWith('<svg ')).toBe(true)
+})
+
+const pdfInputs = [
+  { entry: 'cli', args: [], input: `<Svg width={px(160)} height={px(100)}>
+    <VStack>
+      <Text>Vector PDF</Text>
+      <Latex text="x^2" />
+    </VStack>
+  </Svg>` },
+  { entry: 'tex', args: [String.raw`\frac{1}{\sqrt{x}}`, '--fit', '-W', '160', '-H', '100'], input: '' },
+]
+
+test('both commands emit binary PDF from the laid-out fragment with shared render options', async () => {
+  for (const { entry, args, input } of pdfInputs) {
+    for (const theme of [[], ['--theme', 'dark']]) {
+      const options = [...args, ...theme]
+      const json = await cli([...options, '-f', 'json'], input, entry)
+      expect(json.code).toBe(0)
+      const fragment = JSON.parse(json.text) as Fragment
+      const title = 'Gum (α) 🌱', background = '#369'
+      const result = await cli([...options, '-f', 'pdf', '--title', title, '--background', background,
+        '--ratio', '3', '--id-prefix', 'not an SVG identifier', '--stats'], input, entry)
+      expect(result.code).toBe(0)
+      expect(result.text).toStartWith('%PDF-1.4\n')
+      expect(result.text).toContain('/MediaBox [0 0 120 75]')
+      expect<Uint8Array>(result.bytes).toEqual(render_pdf(fragment, { title, background }))
+      expect(JSON.parse(result.error).layouts).toBeGreaterThan(0)
+    }
+  }
+})
+
+test('both commands infer PDF filenames and let an explicit format override the extension', async () => {
+  for (const { entry, args, input } of pdfInputs) {
+    const stdout = await cli([...args, '-f', 'pdf'], input, entry)
+    expect(stdout.code).toBe(0)
+    expect(stdout.error).toBe('')
+    for (const [file, format] of [[`${entry}.pdf`, []], [`${entry}-pdf.svg`, ['-f', 'pdf']]] as const) {
+      const result = await cli([...args, '-o', file, ...format], input, entry)
+      expect(result.code).toBe(0)
+      expect(result.bytes.length).toBe(0)
+      expect(result.error).toBe('')
+      expect(new Uint8Array(await Bun.file(join(scratch, file)).arrayBuffer())).toEqual(stdout.bytes)
+    }
+    const svg = await cli([...args, '-o', `${entry}-svg.pdf`, '-f', 'svg'], input, entry)
+    expect(svg.code).toBe(0)
+    expect(await Bun.file(join(scratch, `${entry}-svg.pdf`)).text()).toStartWith('<svg ')
+    const help = await cli(['--help'], '', entry)
+    expect(help.text).toContain('"pdf"')
+    expect(help.text).toContain('SVG or PDF document title')
+  }
+})
+
+test('PDF errors reach stderr without emitting or overwriting output', async () => {
+  for (const { entry, args, input } of pdfInputs) {
+    const file = `${entry}-invalid.pdf`
+    await Bun.write(join(scratch, file), 'existing file')
+    for (const [options, message] of [
+      [['-W', '0'], 'positive and finite'],
+      [['--background', 'var(--paint)'], 'Unsupported PDF color'],
+    ] as const) {
+      const result = await cli([...args, '-f', 'pdf', '-o', file, ...options], input, entry)
+      expect(result.code).toBe(1)
+      expect(result.bytes.length).toBe(0)
+      expect(result.error).toContain(message)
+      expect(await Bun.file(join(scratch, file)).text()).toBe('existing file')
+    }
+  }
 })
 
 test('viewport clipping and explicit uniform fitting are distinct', async () => {
