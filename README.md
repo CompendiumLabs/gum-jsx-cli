@@ -15,12 +15,12 @@ From the workspace root:
 ```sh
 bun install
 bun run gum --help
-bun run gum gum-jsx-docs/elements/code/Frame.jsx
-bun run gum gum-jsx-docs/elements/code/Frame.jsx -f tree --stats
-bun run gum gum-jsx-docs/topics/code/repeated.jsx -o /tmp/repeated.svg
-bun run gum gum-jsx-docs/topics/code/repeated.jsx -o /tmp/repeated.pdf
-bun run gum gum-jsx-docs/elements/code/Box.jsx -W 220 -o /tmp/card.png --ratio 2
-bun run gum gum-jsx-docs/elements/code/Group.jsx -W 640 -H 320
+bun run gum gum-jsx-docs/docs/elements/code/Frame.jsx
+bun run gum gum-jsx-docs/docs/elements/code/Frame.jsx -f tree --stats
+bun run gum gum-jsx-docs/docs/gallery/code/repeated.jsx -o /tmp/repeated.svg
+bun run gum gum-jsx-docs/docs/gallery/code/repeated.jsx -o /tmp/repeated.pdf
+bun run gum gum-jsx-docs/docs/elements/code/Box.jsx -W 220 -o /tmp/card.png --ratio 2
+bun run gum gum-jsx-docs/docs/elements/code/Group.jsx -W 640 -H 320
 printf '%s\n' '<Square width={px(40)} fill="tomato"/>' | bun run gum -f svg
 ```
 
@@ -79,7 +79,7 @@ An explicit root `<Svg theme="light|dark">` overrides that default, and
 colors in JSX still apply. Themes do not specify backgrounds. `--background`
 paints a backdrop at render time; omit it for transparency. Explicit backgrounds
 in JSX still apply and paint over the render backdrop. See
-[Themes](../gum-jsx-docs/topics/text/Themes.md) for palettes and semantic paints.
+[Themes](../gum-jsx-docs/docs/gallery/text/Themes.md) for palettes and semantic paints.
 
 PNG and kitty use the workspace's node-canvas dependency through `gum-jsx-png`,
 loaded only for these formats. Text is already SVG glyph paths, so no font
@@ -184,5 +184,5 @@ Font size controls typography. `-W` / `-H` alone change the clipping viewport;
 layout path and TeX source range when available; malformed and unsupported TeX
 exit with status 1. No JavaScript evaluation is used for TeX input.
 
-See the [standalone export guide](../gum-jsx-docs/topics/text/MathExport.md) for
+See the [standalone export guide](../gum-jsx-docs/docs/gallery/text/MathExport.md) for
 synchronous/asynchronous library helpers and font-resource ownership.

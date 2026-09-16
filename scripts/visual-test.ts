@@ -8,7 +8,7 @@ import { createMathFonts } from 'gum-jsx-math'
 import {
   elementsCodeDir,
   packageRoot as docsRoot,
-  topicsCodeDir,
+  galleryCodeDir,
   visualTestsCodeDir,
 } from '../../gum-jsx-docs/src/dirs'
 
@@ -39,7 +39,7 @@ type Manifest = {
 
 const groups = [
   { name: 'elements', dir: elementsCodeDir },
-  { name: 'topics', dir: topicsCodeDir },
+  { name: 'gallery', dir: galleryCodeDir },
   { name: 'visual', dir: visualTestsCodeDir },
 ] as const
 
