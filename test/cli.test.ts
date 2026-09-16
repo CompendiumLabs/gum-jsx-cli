@@ -29,6 +29,29 @@ function png_size(bytes: Uint8Array) {
   return { width: view.getUint32(16), height: view.getUint32(20) }
 }
 
+test('both CLIs crop PNG and kitty output in source pixels before applying ratio', async () => {
+  for (const entry of ['cli', 'tex']) {
+    const args = entry === 'tex' ? ['x^2'] : []
+    const source = entry === 'cli' ? '<Square width={px(40)} fill="red" />' : ''
+    const options = [...args, '--select', '10,5,12,8', '--ratio', '3', '--theme', 'light']
+    const png = await cli([...options, '-f', 'png'], source, entry)
+    expect(png.code).toBe(0)
+    expect(png_size(png.bytes)).toEqual({ width: 36, height: 24 })
+    const kitty = await cli(options, source, entry)
+    expect(kitty.code).toBe(0)
+    const encoded = [...kitty.text.matchAll(/\x1b_G[^;]*;([^\x1b]*)\x1b\\/g)].map(match => match[1]).join('')
+    expect(new Uint8Array(Buffer.from(encoded, 'base64'))).toEqual(png.bytes)
+    const unsupported = await cli([...options, '-f', 'svg'], source, entry)
+    expect(unsupported.code).toBe(1)
+    expect(unsupported.error).toContain('only available for PNG and kitty')
+    for (const select of ['0,0,0,5', '1,2,3', 'NaN,0,2,2', '0,,2,2']) {
+      const invalid = await cli([...args, '--select', select], source, entry)
+      expect(invalid.code).toBe(1)
+      expect(invalid.error).toContain('select must be')
+    }
+  }
+})
+
 test('gum-tex literal, file, and stdin match the library SVG', async () => {
   const tex = String.raw`\mathllap{x}\int_0^\infty e^{-t}\,dt`
   await Bun.write(join(scratch, 'formula.tex'), tex)

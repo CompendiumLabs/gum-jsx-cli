@@ -3,6 +3,7 @@ import { extname } from 'node:path'
 import { Command, InvalidArgumentError, Option } from 'commander'
 import { Svg, LayoutPass, exact, make_request, render_svg, inspect_fragment } from 'gum-jsx-core'
 import type { Element, ThemeName } from 'gum-jsx-core'
+import type { RasterSelection } from '@gum-jsx/png'
 import { createMathFonts } from 'gum-jsx-math'
 import { format_image } from './kitty'
 
@@ -12,6 +13,7 @@ type RenderOptions = {
   width?: number
   height?: number
   ratio: number
+  select?: RasterSelection
   background?: string
   theme?: ThemeName
   title?: string
@@ -36,11 +38,23 @@ function ratio_option(value: string): number {
   return ratio
 }
 
+function selection_option(value: string): RasterSelection {
+  const parts = value.split(',')
+  const [x, y, width, height] = parts.map(part => part.trim() === '' ? NaN : Number(part))
+  if (parts.length !== 4 || ![x, y, width, height].every(Number.isFinite) || width <= 0 || height <= 0) {
+    throw new InvalidArgumentError('select must be x,y,width,height in pixels with finite coordinates and positive dimensions')
+  }
+  return { x, y, width, height }
+}
+
 // Both authoring commands share layout and the selected export backend.
 async function render(element: Element, values: RenderOptions): Promise<void> {
   const { width, height, ratio } = values
   const format = values.format ?? (values.output ? extname(values.output).slice(1) : 'kitty')
   if (!formats.includes(format)) throw new Error(`Unknown format: ${format}`)
+  if (values.select && format !== 'png' && format !== 'kitty') {
+    throw new Error('--select is only available for PNG and kitty output')
+  }
   const viewport = element instanceof Svg ? element : new Svg({ children: element })
   element = new Svg(viewport.type, {
     ...viewport.props,
@@ -67,7 +81,7 @@ async function render(element: Element, values: RenderOptions): Promise<void> {
     })
     if (format === 'png' || format === 'kitty') {
       const { rasterize_svg } = await import('gum-jsx-png')
-      const png = rasterize_svg(output, { size: fragment.size, ratio })
+      const png = rasterize_svg(output, { size: fragment.size, ratio, select: values.select })
       output = format === 'kitty' ? format_image(png) + '\n' : png
     } else output += '\n'
   }
@@ -84,6 +98,7 @@ function output_options(program: Command): Command {
     .option('-W, --width <pixels>', 'Set the viewport width', value => number_option(value, 'width'))
     .option('-H, --height <pixels>', 'Set the viewport height', value => number_option(value, 'height'))
     .option('-r, --ratio <number>', 'PNG/kitty sampling ratio', ratio_option, 1)
+    .option('--select <x,y,width,height>', 'Crop PNG/kitty to a box in source pixels', selection_option)
     .option('-b, --background <color>', 'Paint the viewport background')
     .addOption(new Option('-t, --theme <theme>', 'Render theme (default: source theme, or dark for kitty / light otherwise)')
       .choices(['light', 'dark']))

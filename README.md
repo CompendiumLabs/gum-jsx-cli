@@ -40,6 +40,7 @@ Options:
   -W, --width <pixels>   Set the viewport width
   -H, --height <pixels>  Set the viewport height
   --ratio <number>       PNG/kitty sampling ratio (default: 1)
+  --select <x,y,width,height>  Crop PNG/kitty to a box in source pixels
   --background <color>   Paint the viewport background
   --theme <theme>        light or dark (default: source theme, or dark for kitty / light otherwise)
   --title <text>         Set the SVG or PDF document title
@@ -55,6 +56,12 @@ sizing or hug the content. Zero is a valid viewport dimension for SVG, tree, and
 JSON; PNG, PDF, and kitty require positive dimensions. The sampling ratio must be
 positive and changes raster sampling without changing layout. Raster dimensions
 round up to whole pixels.
+
+Use `--select 100,50,200,100 --ratio 3` to crop a 200-by-100-pixel region
+starting at `(100, 50)` and render it at 600 by 300 pixels. Coordinates are in
+the laid-out source viewport, measured from the top-left. Selection applies to
+PNG and kitty output in both commands; other formats report an error. Fractional
+coordinates and regions extending outside the image are supported.
 
 An explicit format takes precedence over the output filename. Otherwise the
 output extension selects the format; stdout defaults to kitty, including when
