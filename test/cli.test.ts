@@ -224,6 +224,25 @@ test('the JSX gum command retains SVG, raster, inspection, and math bindings', a
   expect(JSON.parse((await cli(['-f', 'json'], square, 'cli')).text).name).toBe('Svg')
 })
 
+test('gum-mark reads Markdown from stdin or a file and renders embedded math', async () => {
+  const stdin = await cli(['--inline-height', '42'], 'A $x^2$ formula\n', 'mark')
+  expect(stdin.code).toBe(0)
+  expect(stdin.error).toBe('')
+  const encoded = [...stdin.text.matchAll(/\x1b_G[^;]*;([^\x1b]*)\x1b\\/g)]
+    .map(match => match[1]).join('')
+  expect(png_size(new Uint8Array(Buffer.from(encoded, 'base64'))).height).toBe(42)
+
+  await Bun.write(join(scratch, 'notes.md'), '# Notes\n\nText **here**.\n')
+  const file = await cli(['notes.md'], '', 'mark')
+  expect(file.code).toBe(0)
+  expect(file.text).toContain('# Notes')
+  expect(file.text).toContain('**here**')
+
+  const invalid = await cli(['--height', '0'], '', 'mark')
+  expect(invalid.code).toBe(1)
+  expect(invalid.error).toContain('positive and finite')
+})
+
 test('themes honor source selection, CLI overrides, and explicit JSX paints', async () => {
   const source = `<Svg theme="dark" width={px(90)} height={px(40)}>
     <HStack>

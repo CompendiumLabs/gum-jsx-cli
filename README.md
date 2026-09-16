@@ -1,6 +1,7 @@
 # gum-jsx-cli
 
-The Bun command-line interface for Gum. `gum` reads JSX and `gum-tex` reads TeX.
+The Bun command-line interface for Gum. `gum` reads JSX, `gum-tex` reads TeX,
+and `gum-mark` displays Markdown with embedded Gum figures and math.
 It lays out the
 result, and displays it with kitty graphics by default. SVG, PNG, PDF, fragment-tree,
 and JSON output are also available. Commander supplies argument parsing and
@@ -23,9 +24,9 @@ bun run gum gum-jsx-docs/elements/code/Group.jsx -W 640 -H 320
 printf '%s\n' '<Square width={px(40)} fill="tomato"/>' | bun run gum -f svg
 ```
 
-The package also exposes a `gum` executable at `node_modules/.bin/gum` in the
-workspace. Inside this package, use `bun run gum [file.jsx] [options]`. Input and
-output paths are relative to the directory where you run the command.
+The package also exposes `gum`, `gum-tex`, and `gum-mark` executables. Inside
+this package, use `bun run gum [file.jsx] [options]`. Input and output paths are
+relative to the directory where you run the command.
 
 ```text
 Usage: gum [options] [file]
@@ -117,10 +118,27 @@ directory. The checked-in report notes are in
 
 The protocol encoders in [src/kitty.ts](./src/kitty.ts) accept PNG or raw RGBA
 data, with image/placement IDs, terminal columns/rows, cursor movement, and
-virtual-placement controls. Unicode placeholder text generation is still pending.
+virtual-placement controls. `@gum-jsx/mark` adds virtual image placements and
+Unicode placeholder grids for pager output.
 
 Watch mode and deck workflows remain
 tracked in [FEATURES.md](../docs/FEATURES.md#command-line-and-authoring-workflows).
+
+## Markdown terminal output
+
+```sh
+bun run gum-mark README.md
+bun run gum-mark notes.md -t light -H 120
+bun run gum-mark notes.md -p
+printf 'Inline math: $x^2$\n' | bun run gum-mark
+```
+
+`gum-mark` renders headings and inline Markdown as ANSI text. Fenced `gum` or
+`gum.jsx` blocks, local `.jsx`, `.svg`, and `.png` images, and `$...$` or
+`$$...$$` math become kitty graphics. Fence metadata and image alt text accept
+`width=`, `height=`, and `theme=` overrides. `--pager` sends virtual image
+placements to the terminal and passes their Unicode placeholder grids through
+`less -R`.
 
 ## Standalone TeX
 

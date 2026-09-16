@@ -6,10 +6,12 @@
   "license": "MIT",
   "bin": {
     "gum": "src/cli.ts",
-    "gum-tex": "src/tex.ts"
+    "gum-tex": "src/tex.ts",
+    "gum-mark": "src/mark.ts"
   },
   "scripts": {
     "gum": "bun src/cli.ts",
+    "gum-mark": "bun src/mark.ts",
     "typecheck": "tsc --noEmit",
     "gum-tex": "bun src/tex.ts",
     "test": "bun test",
@@ -21,6 +23,7 @@
     "commander": "^14.0.3",
     "@gum-jsx/core": "workspace:*",
     "@gum-jsx/math": "workspace:*",
+    "@gum-jsx/mark": "workspace:*",
     "@gum-jsx/pdf": "workspace:*",
     "@gum-jsx/png": "workspace:*"
   },
