@@ -1,6 +1,5 @@
 {
   "name": "@gum-jsx/cli",
-  "version": "0.1.0",
   "description": "Command-line rendering for gum-jsx.",
   "type": "module",
   "private": true,
