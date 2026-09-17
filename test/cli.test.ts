@@ -270,10 +270,10 @@ test('themes honor source selection, CLI overrides, and explicit JSX paints', as
 
 test('TeX defaults to light exports and lets theme or color override the foreground', async () => {
   for (const [args, foreground] of [
-    [[], 'black'],
-    [['--theme', 'light'], 'black'],
-    [['--theme', 'dark'], 'white'],
-    [['-t', 'dark'], 'white'],
+    [[], THEMES.light.foreground],
+    [['--theme', 'light'], THEMES.light.foreground],
+    [['--theme', 'dark'], THEMES.dark.foreground],
+    [['-t', 'dark'], THEMES.dark.foreground],
     [['--theme', 'dark', '--color', 'navy'], 'navy'],
   ] as const) {
     const result = await cli(['x^2', '-f', 'json', ...args])
@@ -295,7 +295,7 @@ test('TeX backgrounds are optional render options independent of the theme', asy
     const painted = await cli([...args, '-f', 'svg', '--background', 'navy'])
     expect(painted.code).toBe(0)
     expect(painted.text).toContain('fill="navy"')
-    expect(painted.text).toMatch(new RegExp(`<path\\b[^>]*fill="${theme === 'dark' ? 'white' : 'black'}"`))
+    expect(painted.text).toMatch(new RegExp(`<path\\b[^>]*fill="${THEMES[theme as keyof typeof THEMES].foreground}"`))
     const tree = await cli([...args, '-f', 'json', '--background', 'navy'])
     expect(tree.code).toBe(0)
     expect(JSON.parse(tree.text).draw).toEqual([])
