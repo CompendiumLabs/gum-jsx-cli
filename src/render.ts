@@ -1,8 +1,8 @@
 import { writeFileSync } from 'node:fs'
 import { extname } from 'node:path'
 import { Command, InvalidArgumentError, Option } from 'commander'
-import { Svg, LayoutPass, exact, make_request, render_svg, inspect_fragment } from 'gum-jsx-core'
-import type { Element, ThemeName } from 'gum-jsx-core'
+import { exact, make_request, layout_element, render_svg, inspect_fragment } from 'gum-jsx-core'
+import type { ThemeName } from 'gum-jsx-core'
 import type { RasterSelection } from '@gum-jsx/png'
 import { createMathFonts } from 'gum-jsx-math'
 import { format_image } from './kitty'
@@ -47,47 +47,51 @@ function selection_option(value: string): RasterSelection {
   return { x, y, width, height }
 }
 
+// Sources that return a plain value print it as text: strings verbatim, the rest as JSON.
+function format_value(value: unknown): string {
+  return typeof value === 'string' ? value : JSON.stringify(value, null, 2) ?? String(value)
+}
+
 // Both authoring commands share layout and the selected export backend.
-async function render(element: Element, values: RenderOptions): Promise<void> {
+async function render(value: unknown, values: RenderOptions): Promise<void> {
   const { width, height, ratio } = values
   const format = values.format ?? (values.output ? extname(values.output).slice(1) : 'kitty')
   if (!formats.includes(format)) throw new Error(`Unknown format: ${format}`)
   if (values.select && format !== 'png' && format !== 'kitty') {
     throw new Error('--select is only available for PNG and kitty output')
   }
-  const viewport = element instanceof Svg ? element : new Svg({ children: element })
-  element = new Svg(viewport.type, {
-    ...viewport.props,
-    theme: values.theme ?? viewport.props.theme ?? (format === 'kitty' ? 'dark' : 'light'),
-  })
   const request = make_request({
-    ...(width === undefined ? {} : { width: exact(width) }),
-    ...(height === undefined ? {} : { height: exact(height) }),
+    width: width === undefined ? undefined : exact(width),
+    height: height === undefined ? undefined : exact(height),
   })
-  const fonts = createMathFonts()
-  const pass = new LayoutPass({ fonts: { value: fonts, version: fonts.version } })
-  const fragment = pass.layout(element, request)
+  const result = layout_element(value, {
+    request,
+    defaults: { theme: format === 'kitty' ? 'dark' : 'light' },
+    overrides: { theme: values.theme },
+    fonts: createMathFonts(),
+  })
 
   let output: string | Uint8Array
-  if (format === 'tree') output = inspect_fragment(fragment) + '\n'
-  else if (format === 'json') output = JSON.stringify(fragment, null, 2) + '\n'
+  if (result.kind === 'value') output = format_value(result.value) + '\n'
+  else if (format === 'tree') output = inspect_fragment(result.fragment) + '\n'
+  else if (format === 'json') output = JSON.stringify(result.fragment, null, 2) + '\n'
   else if (format === 'pdf') {
     const { render_pdf } = await import('@gum-jsx/pdf')
-    output = render_pdf(fragment, { background: values.background, title: values.title })
+    output = render_pdf(result.fragment, { background: values.background, title: values.title })
   }
   else {
-    output = render_svg(fragment, {
+    output = render_svg(result.fragment, {
       background: values.background, title: values.title, id_prefix: values.idPrefix,
     })
     if (format === 'png' || format === 'kitty') {
       const { rasterize_svg } = await import('gum-jsx-png')
-      const png = rasterize_svg(output, { size: fragment.size, ratio, select: values.select })
+      const png = rasterize_svg(output, { size: result.fragment.size, ratio, select: values.select })
       output = format === 'kitty' ? format_image(png) + '\n' : png
     } else output += '\n'
   }
   if (values.output) writeFileSync(values.output, output)
   else process.stdout.write(output)
-  if (values.stats) console.error(JSON.stringify(pass.stats))
+  if (values.stats && result.kind === 'fragment') console.error(JSON.stringify(result.pass.stats))
 }
 
 function output_options(program: Command): Command {

@@ -317,3 +317,12 @@ test('kitty defaults to dark for both JSX and TeX while PNG defaults to light', 
     expect(Buffer.from(light.bytes).equals(Buffer.from(dark.bytes))).toBe(false)
   }
 })
+
+test('gum prints plain values returned by the source as text', async () => {
+  const json = await cli(['-f', 'svg'], 'const x = 2\nreturn { x, list: [x, x * 21] }', 'cli')
+  expect(json.code).toBe(0)
+  expect(json.text).toBe('{\n  "x": 2,\n  "list": [\n    2,\n    42\n  ]\n}\n')
+  const text = await cli([], 'return "plain text"', 'cli')
+  expect(text.code).toBe(0)
+  expect(text.text).toBe('plain text\n')
+})
