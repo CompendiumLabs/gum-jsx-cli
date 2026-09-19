@@ -2,7 +2,7 @@
 
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve } from 'node:path'
-import { evaluate, LayoutPass, render_svg, Svg } from 'gum-jsx-core'
+import { available, evaluate, LayoutPass, layout_element, make_request, render_svg } from 'gum-jsx-core'
 import * as math from 'gum-jsx-math'
 import { createMathFonts } from 'gum-jsx-math'
 import {
@@ -69,8 +69,12 @@ function renderExample(group: string, path: string): Entry {
   try {
     if (!code.startsWith('// ')) throw new Error('Visual examples must start with a descriptive comment')
     const element = evaluate(code, { name: path, scope: math, seed: 1 })
-    if (!(element instanceof Svg)) throw new TypeError('Visual examples must include an Svg viewport')
-    const fragment = pass.layout(element)
+    const result = layout_element(element, {
+      pass,
+      request: make_request({ width: available(640), height: available(480) }),
+    })
+    if (result.kind !== 'fragment') throw new TypeError('Visual examples must return an element')
+    const { fragment } = result
     if (!(fragment.size.width > 0 && fragment.size.height > 0)) {
       throw new Error(`Empty viewport: ${fragment.size.width} × ${fragment.size.height}`)
     }

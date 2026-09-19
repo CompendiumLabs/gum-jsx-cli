@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs'
 import { extname } from 'node:path'
 import { Command, InvalidArgumentError, Option } from 'commander'
-import { exact, make_request, layout_element, render_svg, inspect_fragment } from 'gum-jsx-core'
+import { available, exact, make_request, layout_element, render_svg, inspect_fragment } from 'gum-jsx-core'
 import type { ThemeName } from 'gum-jsx-core'
 import type { RasterSelection } from '@gum-jsx/png'
 import { createMathFonts } from 'gum-jsx-math'
@@ -53,16 +53,19 @@ function format_value(value: unknown): string {
 }
 
 // Both authoring commands share layout and the selected export backend.
-async function render(value: unknown, values: RenderOptions): Promise<void> {
+async function render(value: unknown, values: RenderOptions, fallback = false): Promise<void> {
   const { width, height, ratio } = values
   const format = values.format ?? (values.output ? extname(values.output).slice(1) : 'kitty')
   if (!formats.includes(format)) throw new Error(`Unknown format: ${format}`)
   if (values.select && format !== 'png' && format !== 'kitty') {
     throw new Error('--select is only available for PNG and kitty output')
   }
+  // A finite offer lets unsized figures lay out; it does not clip tall documents
+  // or replace source dimensions. A single explicit axis leaves the other natural.
+  const use_fallback = fallback && width === undefined && height === undefined
   const request = make_request({
-    width: width === undefined ? undefined : exact(width),
-    height: height === undefined ? undefined : exact(height),
+    width: width === undefined ? use_fallback ? available(640) : undefined : exact(width),
+    height: height === undefined ? use_fallback ? available(480) : undefined : exact(height),
   })
   const result = layout_element(value, {
     request,

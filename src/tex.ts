@@ -2,7 +2,7 @@
 
 import { readFileSync } from 'node:fs'
 import { Command, InvalidArgumentError } from 'commander'
-import { Fit, Svg, px, em } from 'gum-jsx-core'
+import { px, em } from 'gum-jsx-core'
 import { mathToElement } from 'gum-jsx-math'
 import { output_options, render, number_option, run } from './render'
 import type { RenderOptions } from './render'
@@ -42,7 +42,8 @@ const program = output_options(new Command()
   .option('--inline', 'Use text style instead of display style')
   .option('--no-strut', 'Omit the minimum formula line box')
   .option('--macro <command=tex>', 'Define a macro (repeatable)', macro_option, {})
-  .option('--fit', 'Uniformly fit into --width/--height instead of clipping at the original font size')
+  .option('--fit', 'Allow enlargement to fill --width/--height (default: shrink only)')
+  .option('--no-fit', 'Keep the original formula size and clip at --width/--height')
   .addHelpText('after', '\nExamples:\n  gum-tex "x^2" -o formula.svg\n  gum-tex "x^2" -o formula.pdf\n  gum-tex "x^2" --theme dark\n  gum-tex "x^2" --theme light --background white -o formula.png\n  gum-tex -i formula.tex -s 48 -p 0.25 -o formula.png\n  gum-tex "x^2" --fit -W 320\n')
   .action(async (tex: string | undefined, values: TexOptions) => {
     if (values.input !== undefined && tex !== undefined) throw new Error('Use literal TeX or --input, not both')
@@ -51,9 +52,9 @@ const program = output_options(new Command()
     }
     const text = values.input !== undefined ? readFileSync(values.input === '-' ? 0 : values.input, 'utf8')
       : tex === undefined || tex === '-' ? readFileSync(0, 'utf8') : tex
-    let element = mathToElement(text, { font_size: px(values.fontSize), padding: em(values.padding),
-      inline: values.inline, strut: values.strut, color: values.color, macros: values.macro })
-    if (values.fit) element = new Svg({ children: new Fit({ children: element }) })
+    const element = mathToElement(text, { font_size: px(values.fontSize), padding: em(values.padding),
+      inline: values.inline, strut: values.strut, color: values.color, macros: values.macro,
+      fit: values.fit === true ? 'contain' : values.fit })
     await render(element, values)
   })
 

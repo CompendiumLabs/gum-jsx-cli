@@ -174,9 +174,13 @@ test('PDF errors reach stderr without emitting or overwriting output', async () 
   }
 })
 
-test('viewport clipping and explicit uniform fitting are distinct', async () => {
+test('math shrinks by default, no-fit clips, and explicit fit permits enlargement', async () => {
   const plain = JSON.parse((await cli(['x+y', '-f', 'json'])).text)
-  const clipped = JSON.parse((await cli(['x+y', '-W', '5', '-f', 'json'])).text)
+  const small = JSON.parse((await cli(['x+y', '-W', '5', '-f', 'json'])).text)
+  expect(small.size.width).toBe(5)
+  expect(small.size.height).toBeCloseTo(plain.size.height * 5 / plain.size.width, 8)
+  expect(small.overflow.right).toBe(0)
+  const clipped = JSON.parse((await cli(['x+y', '--no-fit', '-W', '5', '-f', 'json'])).text)
   expect(clipped.size.width).toBe(5)
   expect(clipped.size.height).toBe(plain.size.height)
   expect(clipped.overflow.right).toBeGreaterThan(0)
@@ -222,6 +226,33 @@ test('the JSX gum command retains SVG, raster, inspection, and math bindings', a
   expect(png_size(raster.bytes)).toEqual({ width: 160, height: 80 })
   expect((await cli(['-f', 'tree'], square, 'cli')).text).toContain('Square')
   expect(JSON.parse((await cli(['-f', 'json'], square, 'cli')).text).name).toBe('Svg')
+})
+
+test('JSX fallback offers size unsized canvases and preserve explicit and intrinsic sizing', async () => {
+  const fragment = async (source: string, args: string[] = []) => {
+    const result = await cli(['-f', 'json', ...args], source, 'cli')
+    expect(result.code).toBe(0)
+    expect(result.error).toBe('')
+    return JSON.parse(result.text) as Fragment
+  }
+  const canvas = '<Group><Rect fill={blue} stroke={none} /></Group>'
+  expect((await fragment(canvas)).size).toEqual({ width: 640, height: 480 })
+  expect((await fragment('<Square width={px(40)} stroke={none} />')).size)
+    .toEqual({ width: 40, height: 40 })
+  expect((await fragment('<Text>Short</Text>')).size.width).toBeLessThan(100)
+  expect((await fragment('<Box width={px(120)} height={px(700)} />')).size)
+    .toEqual({ width: 120, height: 700 })
+  expect((await fragment(canvas, ['-W', '200', '-H', '100'])).size)
+    .toEqual({ width: 200, height: 100 })
+
+  const aspect = '<Group aspect={2}><Rect stroke={none} /></Group>'
+  expect((await fragment(aspect, ['-W', '300'])).size).toEqual({ width: 300, height: 150 })
+  expect((await fragment(aspect, ['-H', '90'])).size).toEqual({ width: 180, height: 90 })
+  expect((await fragment('<Rect stroke={none} />', ['--natural'])).size)
+    .toEqual({ width: 16, height: 16 })
+  const unbounded = await cli(['-f', 'svg', '--natural'], canvas, 'cli')
+  expect(unbounded.code).toBe(1)
+  expect(unbounded.error).toContain('finite width and height')
 })
 
 test('gum-mark reads Markdown from stdin or a file and renders embedded math', async () => {

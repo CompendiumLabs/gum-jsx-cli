@@ -40,6 +40,7 @@ Options:
   -o, --output <file>    Write output to a file instead of stdout
   -W, --width <pixels>   Set the viewport width
   -H, --height <pixels>  Set the viewport height
+  --natural             Measure without the default 640 × 480 offer (JSX only)
   --ratio <number>       PNG/kitty sampling ratio (default: 1)
   --select <x,y,width,height>  Crop PNG/kitty to a box in source pixels
   --background <color>   Paint the viewport background
@@ -52,8 +53,13 @@ Options:
 
 Omit the input file or use `-` to read stdin. A bare element is wrapped in `Svg`.
 `-W` / `--width` and `-H` / `--height` are independent pixel overrides; `-h`
-remains the help shortcut. Omitted axes retain source
-sizing or hug the content. Zero is a valid viewport dimension for SVG, tree, and
+remains the help shortcut. With neither override, `gum` offers 640 × 480 pixels
+so unsized canvases can render. This is an advisory budget: explicit source sizes
+still win, short content hugs, and tall documents can grow vertically. Use
+`--natural` to disable this fallback. With either override, the other axis retains
+source sizing or hugs content, allowing `-W 320` to reflow a document and an
+aspect ratio to determine a figure's height. `gum-tex` retains natural sizing.
+Zero is a valid viewport dimension for SVG, tree, and
 JSON; PNG, PDF, and kitty require positive dimensions. The sampling ratio must be
 positive and changes raster sampling without changing layout. Raster dimensions
 round up to whole pixels.
@@ -160,7 +166,7 @@ Literal input and `--input` are mutually exclusive. Supply formula contents
 without `$` or `$$` delimiters. Quote shell input with single quotes to preserve
 backslashes; use `--` before a formula starting with a dash.
 
-All output options above apply to both commands. TeX adds:
+The shared output options above apply to both commands; `--natural` is JSX-only. TeX adds:
 
 | Option | Meaning |
 |---|---|
@@ -170,7 +176,8 @@ All output options above apply to both commands. TeX adds:
 | `--no-strut` | Omit the minimum formula line box. |
 | `--color <color>` | Formula color, default theme foreground (white for dark, black for light). |
 | `--macro <command=tex>` | Repeatable definition, such as `'\RR=\mathbb{R}'`. |
-| `--fit` | Uniformly fit the completed formula into `-W` and/or `-H`. |
+| `--fit` | Allow enlargement into `-W` and/or `-H`; the default only shrinks. |
+| `--no-fit` | Keep the original formula size and clip to the viewport. |
 
 Natural exports use `mathToElement` from `gum-jsx-math`: logical space and all
 visible ink are included, with negative extents translated into the viewport.
@@ -178,8 +185,9 @@ Empty axes have a one-pixel floor. This preserves italic overhang, accents,
 laps, and smashed ink without changing their typographic advance inside other
 layouts. Both commands then share layout, inspection, SVG, PNG, PDF, and kitty output.
 
-Font size controls typography. `-W` / `-H` alone change the clipping viewport;
-`--fit` explicitly scales the formula and requires at least one dimension.
+Font size controls typography. `-W` / `-H` shrink the formula when necessary;
+`--fit` also allows enlargement and requires at least one dimension. `--no-fit`
+keeps the formula unscaled and clips it to the viewport.
 `--ratio` controls raster resolution independently. Errors retain the formula's
 layout path and TeX source range when available; malformed and unsupported TeX
 exit with status 1. No JavaScript evaluation is used for TeX input.
