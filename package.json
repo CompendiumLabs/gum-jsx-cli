@@ -14,9 +14,9 @@
     "gum-mark": "bun src/mark.ts",
     "typecheck": "tsc --noEmit",
     "gum-tex": "bun src/tex.ts",
-    "test": "bun test",
-    "visual-test": "bun scripts/visual-test.ts",
-    "visual-report": "bun scripts/visual-test.ts",
+    "test": "bun test ./test",
+    "visual-test": "bun test/visual.ts",
+    "visual-report": "bun test/visual.ts",
     "visual-report:serve": "bun visual-report/serve.ts"
   },
   "dependencies": {

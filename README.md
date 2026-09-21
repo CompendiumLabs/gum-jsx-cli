@@ -104,7 +104,7 @@ Errors go to stderr and exit with status 1. For machine-readable
 Bun's script announcement.
 
 Run `bun run typecheck` here to check the CLI, or from the workspace root to
-check all packages. Run `bun test` here for command integration tests, also included in the
+check all packages. Run `bun run test` here for command integration tests, also included in the
 workspace test command.
 
 ## Visual test report
