@@ -1,8 +1,9 @@
 import { writeFileSync } from 'node:fs'
 import { extname } from 'node:path'
 import { Command, InvalidArgumentError, Option } from 'commander'
-import { available, exact, make_request, layout_element, render_svg, inspect_fragment } from 'gum-jsx-core'
-import type { ThemeName } from 'gum-jsx-core'
+import { available, exact, make_request, layout_element, render_svg, inspect_fragment,
+  DEFAULT_OUTPUT_PRECISION } from 'gum-jsx-core'
+import type { OutputPrecision, ThemeName } from 'gum-jsx-core'
 import type { RasterSelection } from '@gum-jsx/png'
 import { createMathFonts } from 'gum-jsx-math'
 import { format_image } from './kitty'
@@ -18,6 +19,7 @@ type RenderOptions = {
   theme?: ThemeName
   title?: string
   idPrefix: string
+  precision?: OutputPrecision
   stats?: boolean
 }
 
@@ -36,6 +38,14 @@ function ratio_option(value: string): number {
   const ratio = number_option(value, 'ratio')
   if (ratio === 0) throw new InvalidArgumentError('ratio must be positive')
   return ratio
+}
+
+function precision_option(value: string): OutputPrecision {
+  if (value === 'full') return value
+  if (!/^(?:[1-9]|1[0-7])$/.test(value)) {
+    throw new InvalidArgumentError('precision must be an integer from 1 to 17, or "full"')
+  }
+  return Number(value)
 }
 
 function selection_option(value: string): RasterSelection {
@@ -76,15 +86,20 @@ async function render(value: unknown, values: RenderOptions, fallback = false): 
 
   let output: string | Uint8Array
   if (result.kind === 'value') output = format_value(result.value) + '\n'
-  else if (format === 'tree') output = inspect_fragment(result.fragment) + '\n'
+  else if (format === 'tree') output = inspect_fragment(result.fragment, {
+    precision: values.precision ?? DEFAULT_OUTPUT_PRECISION,
+  }) + '\n'
   else if (format === 'json') output = JSON.stringify(result.fragment, null, 2) + '\n'
   else if (format === 'pdf') {
     const { render_pdf } = await import('@gum-jsx/pdf')
-    output = render_pdf(result.fragment, { background: values.background, title: values.title })
+    output = render_pdf(result.fragment, {
+      background: values.background, title: values.title, precision: values.precision,
+    })
   }
   else {
     output = render_svg(result.fragment, {
       background: values.background, title: values.title, id_prefix: values.idPrefix,
+      precision: values.precision,
     })
     if (format === 'png' || format === 'kitty') {
       const { rasterize_svg } = await import('gum-jsx-png')
@@ -111,6 +126,7 @@ function output_options(program: Command): Command {
       .choices(['light', 'dark']))
     .option('--title <text>', 'Set the SVG or PDF document title')
     .option('--id-prefix <name>', 'Prefix SVG definition IDs', 'gum')
+    .option('--precision <digits|full>', 'Output significant digits (default: 10)', precision_option)
     .option('--stats', 'Print layout counters to stderr')
 }
 

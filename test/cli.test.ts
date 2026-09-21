@@ -136,6 +136,33 @@ test('both commands emit binary PDF from the laid-out fragment with shared rende
   }
 })
 
+test('precision flag controls SVG, PDF, and tree numbers and accepts full precision', async () => {
+  const source = '<Svg width={px(1 / 3)} height={px(2)}><Rect width={px(0.1 + 0.2)} height={px(1)} /></Svg>'
+  const rounded = await cli(['-f', 'svg', '--precision', '3'], source, 'cli')
+  expect(rounded.code).toBe(0)
+  expect(rounded.text).toContain('width="0.333"')
+  expect(rounded.text).toContain('<rect x="0" y="0" width="0.3"')
+  const full = await cli(['-f', 'svg', '--precision', 'full'], source, 'cli')
+  expect(full.code).toBe(0)
+  expect(full.text).toContain('width="0.3333333333333333"')
+  expect(full.text).toContain('width="0.30000000000000004"')
+  const pdf = await cli(['-f', 'pdf', '--precision', '3'], source, 'cli')
+  expect(pdf.code).toBe(0)
+  expect(pdf.text).toContain('/MediaBox [0 0 0.25 1.5]')
+  const tree = await cli(['-f', 'tree', '--precision', '3'], source, 'cli')
+  expect(tree.code).toBe(0)
+  expect(tree.text).toContain('0.333×2')
+  const defaultTree = await cli(['-f', 'tree'], source, 'cli')
+  expect(defaultTree.text).toContain('0.3333333333×2')
+  const fullTree = await cli(['-f', 'tree', '--precision', 'full'], source, 'cli')
+  expect(fullTree.text).toContain('0.3333333333333333×2')
+  for (const value of ['0', '18', '2.5', 'bogus']) {
+    const invalid = await cli(['-f', 'svg', '--precision', value], source, 'cli')
+    expect(invalid.code).toBe(1)
+    expect(invalid.error).toContain('precision must be')
+  }
+})
+
 test('both commands infer PDF filenames and let an explicit format override the extension', async () => {
   for (const { entry, args, input } of pdfInputs) {
     const stdout = await cli([...args, '-f', 'pdf'], input, entry)

@@ -47,6 +47,7 @@ Options:
   --theme <theme>        light or dark (default: source theme, or dark for kitty / light otherwise)
   --title <text>         Set the SVG or PDF document title
   --id-prefix <name>     Prefix SVG definition IDs (default: "gum")
+  --precision <digits|full>  Output significant digits (default: 10)
   --stats                Print layout counters to stderr
   -h, --help             display help for command
 ```
@@ -98,6 +99,10 @@ outlines, so they are not searchable or selectable; debug overlays are omitted.
 `--title` sets PDF document metadata. Named, hex, RGB, and HSL colors are supported;
 unsupported paint expressions fail with an error. See the
 [PDF API documentation](../gum-jsx-pdf/README.md) for format limits.
+
+`--precision` sets the significant digits used in SVG, PDF, and tree numeric output;
+PNG and kitty use the resulting SVG. Choose an integer from 1 to 17, or `full`
+for unrounded JavaScript number strings. It does not change layout geometry.
 
 Errors go to stderr and exit with status 1. For machine-readable
 `--stats`, run the executable directly or use `bun run --silent gum` to suppress
