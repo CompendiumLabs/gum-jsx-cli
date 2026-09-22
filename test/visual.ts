@@ -72,7 +72,6 @@ function renderExample(group: string, path: string): Entry {
     const element = evaluate(code, { name: path, scope: math, seed: 1 })
     const result = layout_element(element, {
       pass,
-      viewport: canvas,
       request: make_request({ width: available(canvas.width), height: available(canvas.height) }),
     })
     if (result.kind !== 'fragment') throw new TypeError('Visual examples must return an element')
