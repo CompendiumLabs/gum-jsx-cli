@@ -111,7 +111,7 @@ const pdfInputs = [
   { entry: 'cli', args: [], input: `<Svg width={px(160)} height={px(100)}>
     <VStack>
       <Text>Vector PDF</Text>
-      <Latex text="x^2" />
+      <Latex>x^2</Latex>
     </VStack>
   </Svg>` },
   { entry: 'tex', args: [String.raw`\frac{1}{\sqrt{x}}`, '--fit', '-W', '160', '-H', '100'], input: '' },
