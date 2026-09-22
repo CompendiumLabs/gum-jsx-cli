@@ -52,6 +52,7 @@ function errorMessage(error: unknown): string {
 }
 
 const workspaceRoot = dirname(docsRoot)
+const canvas = { width: 640, height: 480 }
 const fonts = createMathFonts()
 const pass = new LayoutPass({ fonts: { value: fonts, version: fonts.version } })
 
@@ -71,7 +72,8 @@ function renderExample(group: string, path: string): Entry {
     const element = evaluate(code, { name: path, scope: math, seed: 1 })
     const result = layout_element(element, {
       pass,
-      request: make_request({ width: available(640), height: available(480) }),
+      viewport: canvas,
+      request: make_request({ width: available(canvas.width), height: available(canvas.height) }),
     })
     if (result.kind !== 'fragment') throw new TypeError('Visual examples must return an element')
     const { fragment } = result
