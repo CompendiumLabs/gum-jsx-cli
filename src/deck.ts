@@ -52,14 +52,15 @@ function source_evaluator() {
     if (prelude !== undefined) {
       let shared = scopes.get(prelude)
       if (!shared) {
-        shared = { ...math, ...evaluate_prelude(readFileSync(prelude, 'utf8'), { name: prelude, scope: math }) }
+        const pre = readFileSync(prelude, 'utf8')
+        shared = { ...math, ...evaluate_prelude(pre, { name: prelude, scope: math }) }
         scopes.set(prelude, shared)
       }
       scope = shared
     }
-    return evaluate(readFileSync(file === '-' ? 0 : file, 'utf8'), {
-      name: file === '-' ? 'stdin.jsx' : file, scope,
-    })
+    const src = readFileSync(file === '-' ? 0 : file, 'utf8')
+    const name = file === '-' ? 'stdin.jsx' : file
+    return evaluate(src, { name, scope })
   }
 }
 

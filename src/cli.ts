@@ -22,16 +22,24 @@ async function render_pdf_files(inputs: { file: string; directory: boolean }[], 
   }
   const evaluate = source_evaluator()
   const results = sources.map(source => {
-    const result = layout(evaluate(source), values, !values.natural)
+    const tree = evaluate(source)
+    const result = layout(tree, values, !values.natural)
     if (result.kind !== 'fragment') throw new Error(`${source.file}: PDF pages must return a Gum element`)
     return result
   })
   const output = render_pdf(results.map(result => result.fragment), {
     background: values.background, title, precision: values.precision,
   })
-  if (values.output) writeFileSync(values.output, output)
-  else process.stdout.write(output)
-  if (values.stats) for (const result of results) console.error(JSON.stringify(result.pass.stats))
+  if (values.output) {
+    writeFileSync(values.output, output)
+  } else {
+    process.stdout.write(output)
+  }
+  if (values.stats) {
+    for (const result of results) {
+      console.error(JSON.stringify(result.pass.stats))
+    }
+  }
 }
 
 const program = output_options(new Command()
@@ -48,7 +56,10 @@ const program = output_options(new Command()
       if (format !== 'pdf') throw new Error('Multiple files and deck directories require PDF output (-f pdf or -o deck.pdf)')
       await render_pdf_files(inputs, values)
     } else {
-      await render(source_evaluator()(file_source(files[0])), values, !values.natural)
+      const file = file_source(files[0])
+      const evaluate = source_evaluator()
+      const result = evaluate(file)
+      await render(result, values, !values.natural)
     }
   })
 
