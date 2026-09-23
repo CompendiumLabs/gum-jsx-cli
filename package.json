@@ -2,7 +2,6 @@
   "name": "@gum-jsx/cli",
   "description": "Command-line rendering for gum-jsx.",
   "type": "module",
-  "private": true,
   "license": "MIT",
   "bin": {
     "gum": "src/cli.ts",
@@ -30,5 +29,26 @@
   "devDependencies": {
     "@types/bun": "latest",
     "typescript": "^7"
-  }
+  },
+  "version": "2.0.0-beta.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CompendiumLabs/gum-jsx-cli.git"
+  },
+  "homepage": "https://github.com/CompendiumLabs/gum-jsx-cli#readme",
+  "bugs": {
+    "url": "https://github.com/CompendiumLabs/gum-jsx-cli/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "beta"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ]
 }

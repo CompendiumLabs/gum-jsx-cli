@@ -3,9 +3,9 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { px, em, THEMES } from 'gum-jsx-core'
-import type { Fragment } from 'gum-jsx-core'
-import { mathToSvg } from 'gum-jsx-math'
+import { px, em, THEMES } from '@gum-jsx/core'
+import type { Fragment } from '@gum-jsx/core'
+import { mathToSvg } from '@gum-jsx/math'
 import { render_pdf } from '@gum-jsx/pdf'
 
 const texDefaults = { font_size: px(64) } as const
@@ -156,7 +156,23 @@ test('precision flag controls SVG, PDF, and tree numbers and accepts full precis
   expect(defaultTree.text).toContain('0.3333333333×2')
   const fullTree = await cli(['-f', 'tree', '--precision', 'full'], source, 'cli')
   expect(fullTree.text).toContain('0.3333333333333333×2')
-  for (const value of ['0', '18', '2.5', 'bogus']) {
+  const decimalSource = '<Svg width={px(123.45678)} height={px(2)} />'
+  const decimalSvg = await cli(['-f', 'svg', '--precision', '3'], decimalSource, 'cli')
+  expect(decimalSvg.code).toBe(0)
+  expect(decimalSvg.text).toContain('width="123.457"')
+  const decimalPdf = await cli(['-f', 'pdf', '--precision', '3'], decimalSource, 'cli')
+  expect(decimalPdf.code).toBe(0)
+  expect(decimalPdf.text).toContain('/MediaBox [0 0 92.593 1.5]')
+  const decimalTree = await cli(['-f', 'tree', '--precision', '3'], decimalSource, 'cli')
+  expect(decimalTree.code).toBe(0)
+  expect(decimalTree.text).toContain('123.457×2')
+  const whole = await cli(['-f', 'svg', '--precision', '0'], decimalSource, 'cli')
+  expect(whole.code).toBe(0)
+  expect(whole.text).toContain('width="123"')
+  const maximum = await cli(['-f', 'svg', '--precision', '100'], source, 'cli')
+  expect(maximum.code).toBe(0)
+  expect(maximum.text).toContain('width="0.3333333333333333"')
+  for (const value of ['-1', '101', '2.5', 'bogus']) {
     const invalid = await cli(['-f', 'svg', '--precision', value], source, 'cli')
     expect(invalid.code).toBe(1)
     expect(invalid.error).toContain('precision must be')

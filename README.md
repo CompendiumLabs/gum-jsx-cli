@@ -1,14 +1,13 @@
-# gum-jsx-cli
+# @gum-jsx/cli
 
-The Bun command-line interface for Gum. `gum` reads JSX, `gum-tex` reads TeX,
-and `gum-mark` displays Markdown with embedded Gum figures and math.
-It lays out the
-result, and displays it with kitty graphics by default. SVG, PNG, PDF, fragment-tree,
-and JSON output are also available. Commander supplies argument parsing and
-generated help. File and terminal I/O live here; evaluation, layout, SVG serialization, and fragment
-inspection use the core's public API. [gum-jsx-png](../gum-jsx-png/README.md)
-provides PNG conversion through node-canvas; [gum-jsx-pdf](../gum-jsx-pdf/README.md)
-exports fragments directly to vector PDF.
+Command-line rendering for Gum. `gum` reads JSX, `gum-tex` renders a TeX formula,
+and `gum-mark` displays Markdown with embedded figures and math. Render to SVG,
+PNG, or PDF, display kitty terminal graphics, or inspect layout as a tree or JSON.
+
+See the [Gum project](https://github.com/CompendiumLabs/gum-jsx#readme) for
+workspace setup and the package overview.
+
+## Quick start
 
 From the workspace root:
 
@@ -28,6 +27,8 @@ The package also exposes `gum`, `gum-tex`, and `gum-mark` executables. Inside
 this package, use `bun run gum [file.jsx] [options]`. Input and output paths are
 relative to the directory where you run the command.
 
+## JSX options
+
 ```text
 Usage: gum [options] [file]
 
@@ -35,21 +36,21 @@ Arguments:
   file                   JSX file (omit or use - for stdin)
 
 Options:
-  -f, --format <format>  Output format (default: kitty or output extension)
+  -f, --format <format>          Output format (default: kitty or output extension)
                          (choices: "kitty", "svg", "png", "pdf", "tree", "json")
-  -o, --output <file>    Write output to a file instead of stdout
-  -W, --width <pixels>   Set the viewport width
-  -H, --height <pixels>  Set the viewport height
-  --natural             Measure without the default 640 × 480 offer (JSX only)
-  --ratio <number>       PNG/kitty sampling ratio (default: 1)
-  --select <x,y,width,height>  Crop PNG/kitty to a box in source pixels
-  --background <color>   Paint the viewport background
-  --theme <theme>        light or dark (default: source theme, or dark for kitty / light otherwise)
-  --title <text>         Set the SVG or PDF document title
-  --id-prefix <name>     Prefix SVG definition IDs (default: "gum")
-  --precision <digits|full>  Output significant digits (default: 10)
-  --stats                Print layout counters to stderr
-  -h, --help             display help for command
+  -o, --output <file>            Write output to a file instead of stdout
+  -W, --width <pixels>           Set the viewport width
+  -H, --height <pixels>          Set the viewport height
+  --natural                      Measure without the default 640 × 480 offer (JSX only)
+  -r, --ratio <number>           PNG/kitty sampling ratio (default: 1)
+  --select <x,y,width,height>    Crop PNG/kitty to a box in source pixels
+  -b, --background <color>       Paint the viewport background
+  -t, --theme <theme>            light or dark (default: source theme, or dark for kitty / light otherwise)
+  --title <text>                 Set the SVG or PDF document title
+  --id-prefix <name>             Prefix SVG definition IDs (default: "gum")
+  --precision <digits|full>      Output decimal places (0–100; default: 10)
+  --stats                        Print layout counters to stderr
+  -h, --help                     display help for command
 ```
 
 Omit the input file or use `-` to read stdin. A bare element is wrapped in `Svg`.
@@ -86,22 +87,23 @@ An explicit root `<Svg theme="light|dark">` overrides that default, and
 colors in JSX still apply. Themes do not specify backgrounds. `--background`
 paints a backdrop at render time; omit it for transparency. Explicit backgrounds
 in JSX still apply and paint over the render backdrop. See
-[Themes](../gum-jsx-docs/docs/gallery/text/Themes.md) for palettes and semantic paints.
+[Themes](https://github.com/CompendiumLabs/gum-jsx-docs/blob/master/docs/gallery/text/Themes.md) for palettes and semantic paints.
 
-PNG and kitty use the workspace's node-canvas dependency through `gum-jsx-png`,
-loaded only for these formats. Text is already SVG glyph paths, so no font
-registration is needed.
+PNG and kitty use node-canvas through `@gum-jsx/png`, loaded only for these
+formats. Ordinary text is already SVG glyph paths and needs no font registration.
+Emoji remain live SVG text and
+depend on the rasterizer's available fonts.
 
-PDF uses `gum-jsx-pdf`, loaded only for this format. It writes a single vector
+PDF uses `@gum-jsx/pdf`, loaded only for this format. It writes a single vector
 page sized to the viewport at 96 pixels per inch (0.75 PDF points per pixel).
 `--ratio` and `--id-prefix` do not affect PDF output. Text and math remain
 outlines, so they are not searchable or selectable; debug overlays are omitted.
 `--title` sets PDF document metadata. Named, hex, RGB, and HSL colors are supported;
 unsupported paint expressions fail with an error. See the
-[PDF API documentation](../gum-jsx-pdf/README.md) for format limits.
+[PDF API documentation](https://github.com/CompendiumLabs/gum-jsx-pdf/blob/master/README.md) for format limits.
 
-`--precision` sets the significant digits used in SVG, PDF, and tree numeric output;
-PNG and kitty use the resulting SVG. Choose an integer from 1 to 17, or `full`
+`--precision` sets the decimal places used in SVG, PDF, and tree numeric output;
+PNG and kitty use the resulting SVG. Choose an integer from 0 to 100, or `full`
 for unrounded JavaScript number strings. It does not change layout geometry.
 
 Errors go to stderr and exit with status 1. For machine-readable
@@ -112,7 +114,7 @@ Run `bun run typecheck` here to check the CLI, or from the workspace root to
 check all packages. Run `bun run test` here for command integration tests, also included in the
 workspace test command.
 
-## Visual test report
+## Development and visual reports
 
 From the workspace root, `bun run visual-test` evaluates every element and topic
 example in `gum-jsx-docs` plus its focused visual regression cases. It checks for
@@ -122,7 +124,7 @@ drawings, then writes a searchable, self-contained report to
 source, dimensions, timing, status filters, deep links, and light/dark page chrome.
 
 `bun run visual-report` is an alias. The HTML opens directly from disk; for an HTTP
-preview, run `bun --filter gum-jsx-cli visual-report:serve`. Pass
+preview, run `bun --filter @gum-jsx/cli visual-report:serve`. Pass
 `--output /some/directory` after the package script to change the generated output
 directory. The checked-in report notes are in
 [visual-report/README.md](./visual-report/README.md).
@@ -133,7 +135,7 @@ virtual-placement controls. `@gum-jsx/mark` adds virtual image placements and
 Unicode placeholder grids for pager output.
 
 Watch mode and deck workflows remain
-tracked in [FEATURES.md](../docs/FEATURES.md#command-line-and-authoring-workflows).
+tracked in [FEATURES.md](https://github.com/CompendiumLabs/gum-jsx/blob/master/docs/FEATURES.md#command-line-and-authoring-workflows).
 
 ## Markdown terminal output
 
@@ -165,8 +167,7 @@ bun run gum-tex 'x^2' -t light --background white -o /tmp/formula.png
 bun run gum-tex --help
 ```
 
-The workspace also installs `node_modules/.bin/gum-tex`. Its positional argument
-is literal TeX. Omit it or use `-` for stdin; use `-i` / `--input` for a file.
+The `gum-tex` positional argument is literal TeX. Omit it or use `-` for stdin; use `-i` / `--input` for a file.
 Literal input and `--input` are mutually exclusive. Supply formula contents
 without `$` or `$$` delimiters. Quote shell input with single quotes to preserve
 backslashes; use `--` before a formula starting with a dash.
@@ -188,7 +189,7 @@ Natural exports use `mathToElement` from `gum-jsx-math`: logical space and all
 visible ink are included, with negative extents translated into the viewport.
 Empty axes have a one-pixel floor. This preserves italic overhang, accents,
 laps, and smashed ink without changing their typographic advance inside other
-layouts. Both commands then share layout, inspection, SVG, PNG, PDF, and kitty output.
+layouts. `gum` and `gum-tex` share layout, inspection, SVG, PNG, PDF, and kitty output.
 
 Font size controls typography. `-W` / `-H` shrink the formula when necessary;
 `--fit` also allows enlargement and requires at least one dimension. `--no-fit`
@@ -197,5 +198,5 @@ keeps the formula unscaled and clips it to the viewport.
 layout path and TeX source range when available; malformed and unsupported TeX
 exit with status 1. No JavaScript evaluation is used for TeX input.
 
-See the [standalone export guide](../gum-jsx-docs/docs/gallery/text/MathExport.md) for
+See the [standalone export guide](https://github.com/CompendiumLabs/gum-jsx-docs/blob/master/docs/gallery/text/MathExport.md) for
 synchronous/asynchronous library helpers and font-resource ownership.

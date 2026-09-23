@@ -2,8 +2,8 @@
 
 import { readFileSync } from 'node:fs'
 import { Command, InvalidArgumentError } from 'commander'
-import { px, em } from 'gum-jsx-core'
-import { mathToElement } from 'gum-jsx-math'
+import { px, em } from '@gum-jsx/core'
+import { mathToElement } from '@gum-jsx/math'
 import { output_options, render, number_option, run } from './render'
 import type { RenderOptions } from './render'
 

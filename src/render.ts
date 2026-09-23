@@ -2,10 +2,10 @@ import { writeFileSync } from 'node:fs'
 import { extname } from 'node:path'
 import { Command, InvalidArgumentError, Option } from 'commander'
 import { available, exact, make_request, layout_element, render_svg, inspect_fragment,
-  DEFAULT_OUTPUT_PRECISION } from 'gum-jsx-core'
-import type { OutputPrecision, ThemeName } from 'gum-jsx-core'
+  DEFAULT_OUTPUT_PRECISION } from '@gum-jsx/core'
+import type { OutputPrecision, ThemeName } from '@gum-jsx/core'
 import type { RasterSelection } from '@gum-jsx/png'
-import { createMathFonts } from 'gum-jsx-math'
+import { createMathFonts } from '@gum-jsx/math'
 import { format_image } from './kitty'
 
 type RenderOptions = {
@@ -42,8 +42,8 @@ function ratio_option(value: string): number {
 
 function precision_option(value: string): OutputPrecision {
   if (value === 'full') return value
-  if (!/^(?:[1-9]|1[0-7])$/.test(value)) {
-    throw new InvalidArgumentError('precision must be an integer from 1 to 17, or "full"')
+  if (!/^(?:[0-9]|[1-9][0-9]|100)$/.test(value)) {
+    throw new InvalidArgumentError('precision must be an integer from 0 to 100, or "full"')
   }
   return Number(value)
 }
@@ -102,7 +102,7 @@ async function render(value: unknown, values: RenderOptions, fallback = false): 
       precision: values.precision,
     })
     if (format === 'png' || format === 'kitty') {
-      const { rasterize_svg } = await import('gum-jsx-png')
+      const { rasterize_svg } = await import('@gum-jsx/png')
       const png = rasterize_svg(output, { size: result.fragment.size, ratio, select: values.select })
       output = format === 'kitty' ? format_image(png) + '\n' : png
     } else output += '\n'
@@ -126,7 +126,7 @@ function output_options(program: Command): Command {
       .choices(['light', 'dark']))
     .option('--title <text>', 'Set the SVG or PDF document title')
     .option('--id-prefix <name>', 'Prefix SVG definition IDs', 'gum')
-    .option('--precision <digits|full>', 'Output significant digits (default: 10)', precision_option)
+    .option('--precision <digits|full>', 'Output decimal places (0–100; default: 10)', precision_option)
     .option('--stats', 'Print layout counters to stderr')
 }
 

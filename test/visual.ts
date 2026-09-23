@@ -2,9 +2,9 @@
 
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve } from 'node:path'
-import { available, evaluate, LayoutPass, layout_element, make_request, render_svg } from 'gum-jsx-core'
-import * as math from 'gum-jsx-math'
-import { createMathFonts } from 'gum-jsx-math'
+import { available, evaluate, LayoutPass, layout_element, make_request, render_svg } from '@gum-jsx/core'
+import * as math from '@gum-jsx/math'
+import { createMathFonts } from '@gum-jsx/math'
 import {
   elementsCodeDir,
   packageRoot as docsRoot,
