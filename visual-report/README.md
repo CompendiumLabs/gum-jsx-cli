@@ -9,5 +9,5 @@ Open the HTML file directly, or run `bun --filter @gum-jsx/cli visual-report:ser
 and visit the printed URL. The generated `dist/` directory is intentionally
 ignored.
 
-See the [CLI README](../README.md#development-and-visual-reports) for workspace
-setup and report options.
+See the [CLI README](../README.md#development-and-visual-reports) for report
+options and development commands.

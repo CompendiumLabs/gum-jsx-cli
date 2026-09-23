@@ -5,27 +5,24 @@ and `gum-mark` displays Markdown with embedded figures and math. Render to SVG,
 PNG, or PDF, display kitty terminal graphics, or inspect layout as a tree or JSON.
 
 See the [Gum project](https://github.com/CompendiumLabs/gum-jsx#readme) for
-workspace setup and the package overview.
+getting started and the package overview.
 
 ## Quick start
 
-From the workspace root:
+Save a Gum JSX figure as `figure.jsx`, then run:
 
 ```sh
-bun install
 bun run gum --help
-bun run gum gum-jsx-docs/docs/elements/code/Frame.jsx
-bun run gum gum-jsx-docs/docs/elements/code/Frame.jsx -f tree --stats
-bun run gum gum-jsx-docs/docs/gallery/code/repeated.jsx -o /tmp/repeated.svg
-bun run gum gum-jsx-docs/docs/gallery/code/repeated.jsx -o /tmp/repeated.pdf
-bun run gum gum-jsx-docs/docs/elements/code/Box.jsx -W 220 -o /tmp/card.png --ratio 2
-bun run gum gum-jsx-docs/docs/elements/code/Group.jsx -W 640 -H 320
+bun run gum figure.jsx
+bun run gum figure.jsx -f tree --stats
+bun run gum figure.jsx -o figure.svg
+bun run gum figure.jsx -o figure.pdf
+bun run gum figure.jsx -W 220 -o figure.png --ratio 2
+bun run gum figure.jsx -W 640 -H 320
 printf '%s\n' '<Square width={px(40)} fill="tomato"/>' | bun run gum -f svg
 ```
 
-The package also exposes `gum`, `gum-tex`, and `gum-mark` executables. Inside
-this package, use `bun run gum [file.jsx] [options]`. Input and output paths are
-relative to the directory where you run the command.
+Input and output paths are relative to the directory where you run the command.
 
 ## JSX options
 
@@ -74,8 +71,8 @@ coordinates and regions extending outside the image are supported.
 
 An explicit format takes precedence over the output filename. Otherwise the
 output extension selects the format; stdout defaults to kitty, including when
-redirected or piped, matching the original gum command. Use `-f svg` for SVG on
-stdout, `-f pdf` for binary PDF on stdout, or `-o figure.svg` / `-o figure.png` /
+redirected or piped. Use `-f svg` for SVG on stdout, `-f pdf` for binary PDF on
+stdout, or `-o figure.svg` / `-o figure.png` /
 `-o figure.pdf` to select a file format automatically.
 Kitty output displays inline in terminals that support the kitty graphics
 protocol and ends with a newline. An explicit `-f kitty` or an output filename
@@ -185,7 +182,7 @@ The shared output options above apply to both commands; `--natural` is JSX-only.
 | `--fit` | Allow enlargement into `-W` and/or `-H`; the default only shrinks. |
 | `--no-fit` | Keep the original formula size and clip to the viewport. |
 
-Natural exports use `mathToElement` from `gum-jsx-math`: logical space and all
+Natural exports use `mathToElement` from `@gum-jsx/math`: logical space and all
 visible ink are included, with negative extents translated into the viewport.
 Empty axes have a one-pixel floor. This preserves italic overhang, accents,
 laps, and smashed ink without changing their typographic advance inside other
