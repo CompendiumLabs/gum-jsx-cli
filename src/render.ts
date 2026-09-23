@@ -62,14 +62,18 @@ function format_value(value: unknown): string {
   return typeof value === 'string' ? value : JSON.stringify(value, null, 2) ?? String(value)
 }
 
-// Both authoring commands share layout and the selected export backend.
-async function render(value: unknown, values: RenderOptions, fallback = false): Promise<void> {
-  const { width, height, ratio } = values
+function output_format(values: RenderOptions): string {
   const format = values.format ?? (values.output ? extname(values.output).slice(1) : 'kitty')
   if (!formats.includes(format)) throw new Error(`Unknown format: ${format}`)
   if (values.select && format !== 'png' && format !== 'kitty') {
     throw new Error('--select is only available for PNG and kitty output')
   }
+  return format
+}
+
+function layout(value: unknown, values: RenderOptions, fallback = false) {
+  const { width, height } = values
+  const format = output_format(values)
   // A finite offer lets unsized figures lay out; it does not clip tall documents
   // or replace source dimensions. A single explicit axis leaves the other natural.
   const use_fallback = fallback && width === undefined && height === undefined
@@ -77,13 +81,18 @@ async function render(value: unknown, values: RenderOptions, fallback = false): 
     width: width === undefined ? use_fallback ? available(640) : undefined : exact(width),
     height: height === undefined ? use_fallback ? available(480) : undefined : exact(height),
   })
-  const result = layout_element(value, {
+  return layout_element(value, {
     request,
     defaults: { theme: format === 'kitty' ? 'dark' : 'light' },
     overrides: { theme: values.theme },
     fonts: createMathFonts(),
   })
+}
 
+// Both authoring commands share layout and the selected export backend.
+async function render(value: unknown, values: RenderOptions, fallback = false): Promise<void> {
+  const format = output_format(values)
+  const result = layout(value, values, fallback)
   let output: string | Uint8Array
   if (result.kind === 'value') output = format_value(result.value) + '\n'
   else if (format === 'tree') output = inspect_fragment(result.fragment, {
@@ -103,7 +112,7 @@ async function render(value: unknown, values: RenderOptions, fallback = false): 
     })
     if (format === 'png' || format === 'kitty') {
       const { rasterize_svg } = await import('@gum-jsx/png')
-      const png = rasterize_svg(output, { size: result.fragment.size, ratio, select: values.select })
+      const png = rasterize_svg(output, { size: result.fragment.size, ratio: values.ratio, select: values.select })
       output = format === 'kitty' ? format_image(png) + '\n' : png
     } else output += '\n'
   }
@@ -138,5 +147,5 @@ async function run(program: Command): Promise<void> {
   }
 }
 
-export { render, output_options, number_option, run }
+export { render, layout, output_format, output_options, number_option, run }
 export type { RenderOptions }

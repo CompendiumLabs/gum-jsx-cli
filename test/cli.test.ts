@@ -1,5 +1,5 @@
 import { test, expect, afterAll } from 'bun:test'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -399,4 +399,122 @@ test('gum prints plain values returned by the source as text', async () => {
   const text = await cli([], 'return "plain text"', 'cli')
   expect(text.code).toBe(0)
   expect(text.text).toBe('plain text\n')
+})
+
+function pdf_title(pdf: string) {
+  const hex = /\/Title <feff([0-9a-f]*)>/.exec(pdf)![1]!
+  return Buffer.from(hex, 'hex').swap16().toString('utf16le')
+}
+
+function pdf_sizes(pdf: string) {
+  return [...pdf.matchAll(/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/g)]
+    .map(match => [Number(match[1]), Number(match[2])])
+}
+
+const slide = (width: number, height = 40) => `<Svg width={px(${width})} height={px(${height})}>
+  <Rect fill="red" />
+</Svg>`
+
+test('multiple JSX files and stdin become PDF pages in argument order', async () => {
+  await Bun.write(join(scratch, 'first.jsx'), slide(80))
+  await Bun.write(join(scratch, 'second.jsx'), slide(120, 60))
+  const args = ['second.jsx', '-', 'first.jsx', '-f', 'pdf', '--stats']
+  const result = await cli(args, slide(40), 'cli')
+  expect(result.code).toBe(0)
+  expect(result.text).toContain('/Count 3')
+  expect(pdf_sizes(result.text)).toEqual([[90, 45], [30, 30], [60, 30]])
+  const stats = result.error.trim().split('\n').map(line => JSON.parse(line))
+  expect(stats).toHaveLength(3)
+  expect(stats.every(stat => stat.layouts > 0)).toBe(true)
+  const file = await cli(['second.jsx', 'first.jsx', '-o', 'pages.pdf', '-W', '200', '-H', '100'], '', 'cli')
+  expect(file.code).toBe(0)
+  expect(file.text).toBe('')
+  expect(pdf_sizes(await Bun.file(join(scratch, 'pages.pdf')).text())).toEqual([[150, 75], [150, 75]])
+})
+
+test('deck manifests order slides, set titles, and share a JSX prelude evaluated once', async () => {
+  const dir = join(scratch, 'manifest-deck')
+  mkdirSync(dir)
+  await Bun.write(join(dir, 'index.json'), JSON.stringify({
+    title: 'Ordered deck', prelude: 'prelude.jsx', slides: ['second.jsx', 'first.jsx'],
+  }))
+  await Bun.write(join(dir, 'prelude.jsx'), `
+    let count = 0
+    function Page({ width }) {
+      return (
+        <Svg width={px(width)} height={px(40 + ++count)}>
+          <Latex>x^2</Latex>
+        </Svg>
+      )
+    }
+  `)
+  await Bun.write(join(dir, 'first.jsx'), '<Page width={80} />')
+  await Bun.write(join(dir, 'second.jsx'), 'const width = 120; return <Page width={width} />')
+  const result = await cli(['manifest-deck', '-f', 'pdf'], '', 'cli')
+  expect(result.code).toBe(0)
+  expect(result.error).toBe('')
+  expect(pdf_sizes(result.text)).toEqual([[90, 30.75], [60, 31.5]])
+  expect(pdf_title(result.text)).toBe('Ordered deck')
+  const override = await cli(['manifest-deck', '-o', 'deck.pdf', '--title', 'Override'], '', 'cli')
+  expect(override.code).toBe(0)
+  expect(pdf_title(await Bun.file(join(scratch, 'deck.pdf')).text())).toBe('Override')
+  const single = await cli(['manifest-deck/first.jsx', '-f', 'svg'], '', 'cli')
+  expect(single.code).toBe(0)
+  expect(single.text).toContain('width="80" height="41"')
+  const explicit = await cli(['manifest-deck/first.jsx', 'manifest-deck/second.jsx', '-f', 'pdf'], '', 'cli')
+  expect(explicit.code).toBe(0)
+  expect(pdf_sizes(explicit.text)).toEqual([[60, 30.75], [90, 31.5]])
+})
+
+test('directories use natural JSX filename order and exclude a declared prelude', async () => {
+  const dir = join(scratch, 'natural-deck')
+  mkdirSync(dir)
+  await Bun.write(join(dir, 'slide_10.jsx'), slide(100))
+  await Bun.write(join(dir, 'slide_2.jsx'), slide(20))
+  await Bun.write(join(dir, 'notes.txt'), 'not a slide')
+  mkdirSync(join(dir, 'nested.jsx'))
+  const result = await cli(['natural-deck', '-f', 'pdf'], '', 'cli')
+  expect(result.code).toBe(0)
+  expect(pdf_sizes(result.text)).toEqual([[15, 30], [75, 30]])
+  await Bun.write(join(dir, 'prelude.jsx'), 'const unused = 42')
+  await Bun.write(join(dir, 'index.json'), JSON.stringify({ prelude: 'prelude.jsx' }))
+  const withPrelude = await cli(['natural-deck', '-f', 'pdf'], '', 'cli')
+  expect(withPrelude.code).toBe(0)
+  expect(withPrelude.bytes).toEqual(result.bytes)
+})
+
+test('invalid decks and non-PDF collections fail without overwriting output', async () => {
+  const dir = join(scratch, 'invalid-deck'), output = join(scratch, 'protected.pdf')
+  mkdirSync(dir)
+  await Bun.write(output, 'keep me')
+  await Bun.write(join(dir, 'good.jsx'), slide(40))
+  await Bun.write(join(dir, 'bad.jsx'), 'return 42')
+  for (const [manifest, message] of [
+    [[], 'expected an object'],
+    [{ title: 1 }, '"title" must be'],
+    [{ prelude: false }, '"prelude" must be'],
+    [{ slides: 'good.jsx' }, '"slides" must be'],
+    [{ slides: [] }, 'no slides'],
+    [{ slides: ['missing.jsx'] }, 'ENOENT'],
+    [{ prelude: 'missing.jsx', slides: ['good.jsx'] }, 'ENOENT'],
+    [{ slides: ['good.jsx', 'bad.jsx'] }, 'PDF pages must return a Gum element'],
+  ] as const) {
+    await Bun.write(join(dir, 'index.json'), JSON.stringify(manifest))
+    const result = await cli(['invalid-deck', '-o', output], '', 'cli')
+    expect(result.code).toBe(1)
+    expect(result.text).toBe('')
+    expect(result.error).toContain(message)
+    expect(await Bun.file(output).text()).toBe('keep me')
+  }
+  for (const args of [
+    ['invalid-deck', '-f', 'svg'],
+    ['invalid-deck/good.jsx', 'invalid-deck/bad.jsx', '-f', 'png'],
+  ]) {
+    const result = await cli(args, '', 'cli')
+    expect(result.code).toBe(1)
+    expect(result.error).toContain('require PDF output')
+  }
+  const duplicate = await cli(['-', '-', '-f', 'pdf'], slide(40), 'cli')
+  expect(duplicate.code).toBe(1)
+  expect(duplicate.error).toContain('Stdin may only be used once')
 })

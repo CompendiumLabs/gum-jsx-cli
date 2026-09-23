@@ -12,14 +12,14 @@ getting started and the package overview.
 Save a Gum JSX figure as `figure.jsx`, then run:
 
 ```sh
-bun run gum --help
-bun run gum figure.jsx
-bun run gum figure.jsx -f tree --stats
-bun run gum figure.jsx -o figure.svg
-bun run gum figure.jsx -o figure.pdf
-bun run gum figure.jsx -W 220 -o figure.png --ratio 2
-bun run gum figure.jsx -W 640 -H 320
-printf '%s\n' '<Square width={px(40)} fill="tomato"/>' | bun run gum -f svg
+gum --help
+gum figure.jsx
+gum figure.jsx -f tree --stats
+gum figure.jsx -o figure.svg
+gum figure.jsx -o figure.pdf
+gum figure.jsx -W 220 -o figure.png --ratio 2
+gum figure.jsx -W 640 -H 320
+printf '%s\n' '<Square width={px(40)} fill="tomato"/>' | gum -f svg
 ```
 
 Input and output paths are relative to the directory where you run the command.
@@ -27,10 +27,10 @@ Input and output paths are relative to the directory where you run the command.
 ## JSX options
 
 ```text
-Usage: gum [options] [file]
+Usage: gum [options] [files...]
 
 Arguments:
-  file                   JSX file (omit or use - for stdin)
+  files                  JSX files or deck directories (omit or use - for stdin)
 
 Options:
   -f, --format <format>          Output format (default: kitty or output extension)
@@ -91,8 +91,8 @@ formats. Ordinary text is already SVG glyph paths and needs no font registration
 Emoji remain live SVG text and
 depend on the rasterizer's available fonts.
 
-PDF uses `@gum-jsx/pdf`, loaded only for this format. It writes a single vector
-page sized to the viewport at 96 pixels per inch (0.75 PDF points per pixel).
+PDF uses `@gum-jsx/pdf`, loaded only for this format. It writes vector
+pages sized to their viewports at 96 pixels per inch (0.75 PDF points per pixel).
 `--ratio` and `--id-prefix` do not affect PDF output. Text and math remain
 outlines, so they are not searchable or selectable; debug overlays are omitted.
 `--title` sets PDF document metadata. Named, hex, RGB, and HSL colors are supported;
@@ -103,13 +103,68 @@ unsupported paint expressions fail with an error. See the
 PNG and kitty use the resulting SVG. Choose an integer from 0 to 100, or `full`
 for unrounded JavaScript number strings. It does not change layout geometry.
 
-Errors go to stderr and exit with status 1. For machine-readable
-`--stats`, run the executable directly or use `bun run --silent gum` to suppress
-Bun's script announcement.
+Errors go to stderr and exit with status 1. `--stats` writes layout counters as
+JSON to stderr, one line per rendered page.
 
 Run `bun run typecheck` here to check the CLI, or from the workspace root to
 check all packages. Run `bun run test` here for command integration tests, also included in the
 workspace test command.
+
+## Multipage PDFs and decks
+
+Pass multiple JSX files in page order, or a directory containing slides:
+
+```sh
+gum intro.jsx figure.jsx conclusion.jsx -o talk.pdf
+gum slides/ -o talk.pdf
+gum slides/ -f pdf > talk.pdf
+```
+
+Multiple files and directories require PDF output. Each slide becomes one page
+with its own viewport size; `-W` and `-H` apply to every page. Long content is not
+automatically split across pages. You can mix files and directories in argument
+order, and use `-` once to include a page from stdin.
+
+A directory can contain an optional `index.json`:
+
+```json
+{
+  "title": "My talk",
+  "prelude": "prelude.jsx",
+  "slides": ["intro.jsx", "figure.jsx", "conclusion.jsx"]
+}
+```
+
+All fields are optional. Without `slides`, Gum uses the directory's `.jsx` files
+in natural filename order (`slide_2.jsx` before `slide_10.jsx`), excluding the
+named prelude. It does not recurse into subdirectories. Manifest paths are
+relative to the directory. When rendering one directory, `title` supplies PDF
+metadata unless `--title` overrides it.
+
+The prelude contains shared declarations, such as colors, data, and JSX helpers:
+
+```jsx
+const accent = '#369'
+function Page({ children }) {
+  return (
+    <Svg width={px(960)} height={px(540)}>
+      <Frame padding={px(32)}>
+        {children}
+      </Frame>
+    </Svg>
+  )
+}
+```
+
+Each prelude is evaluated once per command. Its top-level bindings are available
+to each slide, along with the usual core and math helpers. Slides have separate
+local declarations and may be bare JSX or JavaScript that returns an element.
+Rendering a slide individually also loads the prelude from the `index.json`
+beside it, including for SVG, PNG, and terminal previews:
+
+```sh
+gum slides/figure.jsx -o figure.svg
+```
 
 ## Development and visual reports
 
@@ -131,16 +186,16 @@ data, with image/placement IDs, terminal columns/rows, cursor movement, and
 virtual-placement controls. `@gum-jsx/mark` adds virtual image placements and
 Unicode placeholder grids for pager output.
 
-Watch mode and deck workflows remain
+Watch mode remains
 tracked in [FEATURES.md](https://github.com/CompendiumLabs/gum-jsx/blob/master/docs/FEATURES.md#command-line-and-authoring-workflows).
 
 ## Markdown terminal output
 
 ```sh
-bun run gum-mark README.md
-bun run gum-mark notes.md -t light -H 120
-bun run gum-mark notes.md -p
-printf 'Inline math: $x^2$\n' | bun run gum-mark
+gum-mark README.md
+gum-mark notes.md -t light -H 120
+gum-mark notes.md -p
+printf 'Inline math: $x^2$\n' | gum-mark
 ```
 
 `gum-mark` renders headings and inline Markdown as ANSI text. Fenced `gum` or
@@ -153,15 +208,15 @@ placements to the terminal and passes their Unicode placeholder grids through
 ## Standalone TeX
 
 ```sh
-bun run gum-tex 'e^{i\pi}+1=0' -o /tmp/euler.svg
-bun run gum-tex 'e^{i\pi}+1=0' -o /tmp/euler.pdf
-bun run gum-tex '\frac{a+b}{c+d}' -s 48 -p 0.25 -o /tmp/fraction.png --ratio 2
-bun run gum-tex -i formula.tex --inline -f tree --stats
-printf '%s\n' '\int_0^1 x^2\,dx=\frac13' | bun run gum-tex -f svg
-bun run gum-tex 'x^2' --fit -W 320
-bun run gum-tex 'x^2' --theme dark
-bun run gum-tex 'x^2' -t light --background white -o /tmp/formula.png
-bun run gum-tex --help
+gum-tex 'e^{i\pi}+1=0' -o /tmp/euler.svg
+gum-tex 'e^{i\pi}+1=0' -o /tmp/euler.pdf
+gum-tex '\frac{a+b}{c+d}' -s 48 -p 0.25 -o /tmp/fraction.png --ratio 2
+gum-tex -i formula.tex --inline -f tree --stats
+printf '%s\n' '\int_0^1 x^2\,dx=\frac13' | gum-tex -f svg
+gum-tex 'x^2' --fit -W 320
+gum-tex 'x^2' --theme dark
+gum-tex 'x^2' -t light --background white -o /tmp/formula.png
+gum-tex --help
 ```
 
 The `gum-tex` positional argument is literal TeX. Omit it or use `-` for stdin; use `-i` / `--input` for a file.
