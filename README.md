@@ -28,7 +28,8 @@ project. Output formats include SVG, PNG, PDF, and kitty graphics. Elements, mat
 functions, colors, and layout helpers are already in scope. The figures above are
 Gum output; their sources are [logo.jsx](images/logo.jsx) and [nexus.jsx](images/nexus.jsx).
 
-The current 2.0 prerelease runs with Bun 1.4.2 or newer on Linux x64:
+The current 2.0 prerelease has been tested with Bun 1.4.2 or newer on Linux x64,
+macOS, and Windows:
 
 ```sh
 bun install -g @gum-jsx/cli@beta
