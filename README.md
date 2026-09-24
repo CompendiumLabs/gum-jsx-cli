@@ -3,31 +3,29 @@
     <source media="(prefers-color-scheme: dark)" srcset="images/logo-dark.svg" />
     <img src="images/logo.svg" alt="Gum JSX" width="500" />
   </picture>
-  <br /><br />
-  <img src="images/nexus.svg" alt="Layered red-to-blue wave packets" width="300" />
   <br />
+  <img src="images/nexus.svg" alt="Layered red-to-blue wave packets" width="250" />
+  <br /><br />
 </div>
 
 <p align="center">
   Make plots, diagrams, math, and slides with JSX.
   <br />
   Render them right from your terminal.
-  <br />
-  SVG · PNG · PDF · kitty graphics
 </p>
 
 <p align="center">
   <a href="#install">Install</a> ·
   <a href="#make-your-first-figure">Get started</a> ·
-  <a href="https://github.com/CompendiumLabs/gum-jsx-docs#readme">Documentation</a> ·
-  <a href="https://github.com/CompendiumLabs/gum-jsx-docs/tree/master/docs/gallery">Gallery</a>
+  <a href="https://compendiumlabs.ai/gum/docs">Documentation</a> ·
+  <a href="https://compendiumlabs.ai/gum/gallery">Gallery</a>
 </p>
 
 Gum is a JSX language for vector graphics. The CLI is the fastest way in: write a
 figure in a `.jsx` file, render it with `gum`, and keep the source alongside your
-project. Elements, math functions, colors, and layout helpers are already in
-scope. The figures above are Gum output; their sources are
-[logo.jsx](images/logo.jsx) and [nexus.jsx](images/nexus.jsx).
+project. Output formats include SVG, PNG, PDF, and kitty graphics. Elements, math
+functions, colors, and layout helpers are already in scope. The figures above are
+Gum output; their sources are [logo.jsx](images/logo.jsx) and [nexus.jsx](images/nexus.jsx).
 
 ## Install
 
