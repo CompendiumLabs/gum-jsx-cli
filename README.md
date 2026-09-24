@@ -84,7 +84,7 @@ An explicit root `<Svg theme="light|dark">` overrides that default, and
 colors in JSX still apply. Themes do not specify backgrounds. `--background`
 paints a backdrop at render time; omit it for transparency. Explicit backgrounds
 in JSX still apply and paint over the render backdrop. See
-[Themes](https://github.com/CompendiumLabs/gum-jsx-docs/blob/master/docs/gallery/text/Themes.md) for palettes and semantic paints.
+[Themes](https://github.com/CompendiumLabs/gum-jsx-docs/blob/master/docs/guides/text/themes.md) for palettes and semantic paints.
 
 PNG and kitty use node-canvas through `@gum-jsx/png`, loaded only for these
 formats. Ordinary text is already SVG glyph paths and needs no font registration.
@@ -250,5 +250,5 @@ keeps the formula unscaled and clips it to the viewport.
 layout path and TeX source range when available; malformed and unsupported TeX
 exit with status 1. No JavaScript evaluation is used for TeX input.
 
-See the [standalone export guide](https://github.com/CompendiumLabs/gum-jsx-docs/blob/master/docs/gallery/text/MathExport.md) for
+See the [standalone export guide](https://github.com/CompendiumLabs/gum-jsx-docs/blob/master/docs/guides/text/math_export.md) for
 synchronous/asynchronous library helpers and font-resource ownership.
