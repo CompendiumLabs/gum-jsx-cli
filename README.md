@@ -15,19 +15,18 @@
 </p>
 
 <p align="center">
-  <a href="#install">Install</a> ·
-  <a href="#make-your-first-figure">Get started</a> ·
+  <a href="https://compendiumlabs.ai/gum/studio">Live Demo</a> ·
   <a href="https://compendiumlabs.ai/gum/docs">Documentation</a> ·
   <a href="https://compendiumlabs.ai/gum/gallery">Gallery</a>
 </p>
+
+## Install
 
 Gum is a JSX language for vector graphics. The CLI is the fastest way in: write a
 figure in a `.jsx` file, render it with `gum`, and keep the source alongside your
 project. Output formats include SVG, PNG, PDF, and kitty graphics. Elements, math
 functions, colors, and layout helpers are already in scope. The figures above are
 Gum output; their sources are [logo.jsx](images/logo.jsx) and [nexus.jsx](images/nexus.jsx).
-
-## Install
 
 The current 2.0 prerelease runs with Bun 1.4.2 or newer on Linux x64:
 
