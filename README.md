@@ -3,12 +3,15 @@
     <source media="(prefers-color-scheme: dark)" srcset="images/logo-dark.svg" />
     <img src="images/logo.svg" alt="Gum JSX" width="500" />
   </picture>
+  <br /><br />
+  <img src="images/nexus.svg" alt="Layered red-to-blue wave packets" width="300" />
   <br />
-  <img src="images/nexus.svg" alt="Layered red-to-blue wave packets" width="350" />
 </div>
 
 <p align="center">
-  Make plots, diagrams, math, and slides with JSX. Render them right from your terminal.
+  Make plots, diagrams, math, and slides with JSX.
+  <br />
+  Render them right from your terminal.
   <br />
   SVG · PNG · PDF · kitty graphics
 </p>
@@ -102,31 +105,27 @@ The [Gum workspace](https://github.com/CompendiumLabs/gum-jsx#readme) also has a
 browser editor, TypeScript and React APIs, and separate packages for embedding
 the renderer. The CLI bundles the renderers you need for these commands.
 
-## JSX options
+## Usage
 
-```text
-Usage: gum [options] [files...]
+Run `gum [options] [files...]`:
 
-Arguments:
-  files                  JSX files or deck directories (omit or use - for stdin)
-
-Options:
-  -f, --format <format>          Output format (default: kitty or output extension)
-                         (choices: "kitty", "svg", "png", "pdf", "tree", "json")
-  -o, --output <file>            Write output to a file instead of stdout
-  -W, --width <pixels>           Set the viewport width
-  -H, --height <pixels>          Set the viewport height
-  --natural                      Measure without the default 640 × 480 offer (JSX only)
-  -r, --ratio <number>           PNG/kitty sampling ratio (default: 1)
-  --select <x,y,width,height>    Crop PNG/kitty to a box in source pixels
-  -b, --background <color>       Paint the viewport background
-  -t, --theme <theme>            light or dark (default: source theme, or dark for kitty / light otherwise)
-  --title <text>                 Set the SVG or PDF document title
-  --id-prefix <name>             Prefix SVG definition IDs (default: "gum")
-  --precision <digits|full>      Output decimal places (0–100; default: 10)
-  --stats                        Print layout counters to stderr
-  -h, --help                     display help for command
-```
+| Option | Meaning |
+|---|---|
+| `files...` | JSX files or deck directories; omit or use `-` for stdin. |
+| `-f, --format <format>` | Output format: `kitty`, `svg`, `png`, `pdf`, `tree`, or `json`. Defaults to kitty or the output extension. |
+| `-o, --output <file>` | Write to a file instead of stdout. |
+| `-W, --width <pixels>` | Set the viewport width. |
+| `-H, --height <pixels>` | Set the viewport height. |
+| `--natural` | Measure without the default 640 × 480 offer. |
+| `-r, --ratio <number>` | PNG/kitty sampling ratio, default `1`. |
+| `--select <x,y,width,height>` | Crop PNG/kitty to a box in source pixels. |
+| `-b, --background <color>` | Paint the viewport background. |
+| `-t, --theme <theme>` | `light` or `dark`; defaults to the source theme, or dark for kitty and light otherwise. |
+| `--title <text>` | Set the SVG or PDF document title. |
+| `--id-prefix <name>` | Prefix SVG definition IDs, default `gum`. |
+| `--precision <digits\|full>` | Output decimal places from 0 to 100, or `full`; default `10`. |
+| `--stats` | Print layout counters to stderr. |
+| `-h, --help` | Show command help. |
 
 Omit the input file or use `-` to read stdin. A bare element is wrapped in `Svg`.
 `-W` / `--width` and `-H` / `--height` are independent pixel overrides; `-h`
