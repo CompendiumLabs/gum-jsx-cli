@@ -1,28 +1,106 @@
-# @gum-jsx/cli
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="images/logo-dark.svg" />
+    <img src="images/logo.svg" alt="Gum JSX" width="500" />
+  </picture>
+  <br />
+  <img src="images/nexus.svg" alt="Layered red-to-blue wave packets" width="350" />
+</div>
 
-Command-line rendering for Gum. `gum` reads JSX, `gum-tex` renders a TeX formula,
-and `gum-mark` displays Markdown with embedded figures and math. Render to SVG,
-PNG, or PDF, display kitty terminal graphics, or inspect layout as a tree or JSON.
+<p align="center">
+  Make plots, diagrams, math, and slides with JSX. Render them right from your terminal.
+  <br />
+  SVG · PNG · PDF · kitty graphics
+</p>
 
-See the [Gum project](https://github.com/CompendiumLabs/gum-jsx#readme) for
-getting started and the package overview.
+<p align="center">
+  <a href="#install">Install</a> ·
+  <a href="#make-your-first-figure">Get started</a> ·
+  <a href="https://github.com/CompendiumLabs/gum-jsx-docs#readme">Documentation</a> ·
+  <a href="https://github.com/CompendiumLabs/gum-jsx-docs/tree/master/docs/gallery">Gallery</a>
+</p>
 
-## Quick start
+Gum is a JSX language for vector graphics. The CLI is the fastest way in: write a
+figure in a `.jsx` file, render it with `gum`, and keep the source alongside your
+project. Elements, math functions, colors, and layout helpers are already in
+scope. The figures above are Gum output; their sources are
+[logo.jsx](images/logo.jsx) and [nexus.jsx](images/nexus.jsx).
 
-Save a Gum JSX figure as `figure.jsx`, then run:
+## Install
+
+The current 2.0 prerelease runs with Bun 1.4.2 or newer on Linux x64:
 
 ```sh
-gum --help
-gum figure.jsx
-gum figure.jsx -f tree --stats
-gum figure.jsx -o figure.svg
-gum figure.jsx -o figure.pdf
-gum figure.jsx -W 220 -o figure.png --ratio 2
-gum figure.jsx -W 640 -H 320
-printf '%s\n' '<Square width={px(40)} fill="tomato"/>' | gum -f svg
+bun install -g @gum-jsx/cli@beta
 ```
 
-Input and output paths are relative to the directory where you run the command.
+This installs three commands: `gum` for JSX figures, `gum-tex` for standalone
+TeX, and `gum-mark` for Markdown with inline figures. To work from a
+[source checkout](https://github.com/CompendiumLabs/gum-jsx#development), run
+`bun install` at the workspace root and use `bun run gum` (or the corresponding
+`gum-tex` and `gum-mark` scripts).
+
+## Make your first figure
+
+Save this as `plot.jsx`:
+
+```jsx
+<Plot
+  width={px(750)}
+  height={px(375)}
+  font-size={px(18)}
+  xlim={[0, tau]}
+  ylim={[-1.5, 1.5]}
+  grid
+>
+  <SymLine
+    fy={sin}
+    xlim={[0, tau]}
+    samples={161}
+    stroke={blue}
+    stroke-width={px(2.5)}
+  />
+</Plot>
+```
+
+```sh
+gum plot.jsx -o plot.svg
+gum plot.jsx -o plot.png --ratio 2
+gum plot.jsx -o plot.pdf
+gum plot.jsx                 # Display inline in a kitty-compatible terminal
+```
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/plot-dark.svg" />
+  <img src="images/plot.svg" alt="Sine wave plot rendered from plot.jsx" width="750" />
+</picture>
+
+The [source for this plot](images/plot.jsx) is also in this repository. Change
+the function, limits, or colors and render it again. Use `px(24)` for pixels,
+`em(1.5)` for font-relative lengths, and fractions such as `0.5` for relative
+sizes. Start with the [Gum guide](https://github.com/CompendiumLabs/gum-jsx-docs/blob/master/docs/guides/text/gum.md)
+and the [element examples](https://github.com/CompendiumLabs/gum-jsx-docs/tree/master/docs/elements/code)
+to build beyond this plot.
+
+## Take it further
+
+```sh
+gum diagram.jsx -f tree --stats            # Inspect measured layout
+gum slides/ -o talk.pdf                    # Turn a slide directory into a PDF
+gum-tex 'e^{i\pi}+1=0' -o euler.svg        # Render standalone math
+gum-mark README.md                         # Read Markdown with inline graphics
+printf '%s\n' '<Square width={px(40)} fill="tomato" />' | gum -f svg
+```
+
+`gum` reads from stdin if you omit the input or pass `-`. Input and output paths
+are relative to the directory where you run the command. An output extension
+selects SVG, PNG, or PDF; without `-o`, `gum` sends kitty graphics to stdout.
+Use `-f svg` to send SVG text to stdout. The full options and the other two
+commands are below.
+
+The [Gum workspace](https://github.com/CompendiumLabs/gum-jsx#readme) also has a
+browser editor, TypeScript and React APIs, and separate packages for embedding
+the renderer. The CLI bundles the renderers you need for these commands.
 
 ## JSX options
 
@@ -167,6 +245,17 @@ gum slides/figure.jsx -o figure.svg
 ```
 
 ## Development and visual reports
+
+The artwork at the top of this page is generated from the JSX in `images/`.
+From this package's directory, regenerate it with:
+
+```sh
+bun run gum images/logo.jsx -o images/logo.svg
+bun run gum images/logo.jsx --theme dark -o images/logo-dark.svg
+bun run gum images/nexus.jsx -o images/nexus.svg
+bun run gum images/plot.jsx -o images/plot.svg
+bun run gum images/plot.jsx --theme dark -o images/plot-dark.svg
+```
 
 From the workspace root, `bun run visual-test` evaluates every element and topic
 example in `gum-jsx-docs` plus its focused visual regression cases. It checks for
