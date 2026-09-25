@@ -75,4 +75,4 @@ async function render_deck(result: DeckResult, values: GumOptions): Promise<void
 }
 
 export { load_deck, evaluate_deck, render_deck }
-export type { Deck }
+export type { DeckIndex as Deck }

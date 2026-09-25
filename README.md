@@ -111,6 +111,7 @@ Run `gum [options] [file]` with one input:
 | Option | Meaning |
 |---|---|
 | `file` | One JSX file or deck directory; omit or use `-` for stdin. |
+| `--plugin <module>` | Load extra named bindings from a package or local module; repeat to load more. |
 | `-f, --format <format>` | Output format: `kitty`, `svg`, `png`, `pdf`, `tree`, or `json`. Defaults to kitty or the output extension for a file; directories use PDF. |
 | `-o, --output <file>` | Write to a file instead of stdout. |
 | `-W, --width <pixels>` | Set the viewport width. |
@@ -186,6 +187,36 @@ JSON to stderr, one line per rendered page.
 Run `bun run typecheck` here to check the CLI, or from the workspace root to
 check all packages. Run `bun run test` here for command integration tests, also included in the
 workspace test command.
+
+## Plugins
+
+Core bindings are always available, and math is the default bundled plugin.
+Use `--plugin` to add elements, helpers, or data from installed packages or local
+JavaScript/TypeScript modules:
+
+```sh
+gum figure.jsx --plugin @gum-jsx/maps -o figure.svg
+gum slides/ --plugin ./elements.ts -o talk.pdf
+gum figure.jsx --plugin @gum-jsx/maps --plugin ./elements.ts -o figure.svg
+```
+
+Plugin names and paths resolve from the current working directory, including
+when the CLI is installed globally or the input is in another directory.
+Packages must already be installed in that project. Use `./` for relative module
+paths, or pass an absolute path.
+
+A plugin exports the names to make available in Gum source. For example,
+`elements.ts` could contain:
+
+```ts
+export { Rect as Tile } from '@gum-jsx/core'
+export const accent = 'tomato'
+```
+
+Source can then use `<Tile fill={accent} />`. Named exports are merged after math
+in command-line order, so later plugins override earlier bindings. Default
+exports are ignored. Plugins load before evaluation, and the same bindings are
+available to a file, stdin, or every prelude and slide in a deck.
 
 ## Multipage PDFs and decks
 
