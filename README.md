@@ -95,8 +95,9 @@ printf '%s\n' '<Square width={px(40)} fill="tomato" />' | gum -f svg
 
 `gum` reads from stdin if you omit the input or pass `-`. Input and output paths
 are relative to the directory where you run the command. An output extension
-selects SVG, PNG, or PDF; without `-o`, `gum` sends kitty graphics to stdout.
-Use `-f svg` to send SVG text to stdout. The full options and the other two
+selects SVG, PNG, or PDF. For a file or stdin, `gum` defaults to kitty graphics
+on stdout; directory input defaults to PDF. Use `-f svg` to send SVG text to
+stdout. The full options and the other two
 commands are below.
 
 The [Gum workspace](https://github.com/CompendiumLabs/gum-jsx#readme) also has a
@@ -105,12 +106,12 @@ the renderer. The CLI bundles the renderers you need for these commands.
 
 ## Usage
 
-Run `gum [options] [files...]`:
+Run `gum [options] [file]` with one input:
 
 | Option | Meaning |
 |---|---|
-| `files...` | JSX files or deck directories; omit or use `-` for stdin. |
-| `-f, --format <format>` | Output format: `kitty`, `svg`, `png`, `pdf`, `tree`, or `json`. Defaults to kitty or the output extension. |
+| `file` | One JSX file or deck directory; omit or use `-` for stdin. |
+| `-f, --format <format>` | Output format: `kitty`, `svg`, `png`, `pdf`, `tree`, or `json`. Defaults to kitty or the output extension for a file; directories use PDF. |
 | `-o, --output <file>` | Write to a file instead of stdout. |
 | `-W, --width <pixels>` | Set the viewport width. |
 | `-H, --height <pixels>` | Set the viewport height. |
@@ -145,8 +146,9 @@ PNG and kitty output in both commands; other formats report an error. Fractional
 coordinates and regions extending outside the image are supported.
 
 An explicit format takes precedence over the output filename. Otherwise the
-output extension selects the format; stdout defaults to kitty, including when
-redirected or piped. Use `-f svg` for SVG on stdout, `-f pdf` for binary PDF on
+output extension selects the format. For a file or stdin, stdout defaults to
+kitty, including when redirected or piped; directory input defaults to PDF.
+Use `-f svg` for SVG on stdout, `-f pdf` for binary PDF on
 stdout, or `-o figure.svg` / `-o figure.png` /
 `-o figure.pdf` to select a file format automatically.
 Kitty output displays inline in terminals that support the kitty graphics
@@ -187,18 +189,17 @@ workspace test command.
 
 ## Multipage PDFs and decks
 
-Pass multiple JSX files in page order, or a directory containing slides:
+Pass one directory containing slides to render a multipage PDF:
 
 ```sh
-gum intro.jsx figure.jsx conclusion.jsx -o talk.pdf
 gum slides/ -o talk.pdf
-gum slides/ -f pdf > talk.pdf
+gum slides/ > talk.pdf
 ```
 
-Multiple files and directories require PDF output. Each slide becomes one page
-with its own viewport size; `-W` and `-H` apply to every page. Long content is not
-automatically split across pages. You can mix files and directories in argument
-order, and use `-` once to include a page from stdin.
+Directory input defaults to PDF; other output formats are rejected. Each slide
+becomes one page with its own viewport size; `-W` and `-H` apply to every page.
+Long content is not automatically split across pages. The CLI accepts one input
+path; put multiple figures in a deck directory to combine them into a PDF.
 
 A directory can contain an optional `index.json`:
 
@@ -213,8 +214,8 @@ A directory can contain an optional `index.json`:
 All fields are optional. Without `slides`, Gum uses the directory's `.jsx` files
 in natural filename order (`slide_2.jsx` before `slide_10.jsx`), excluding the
 named prelude. It does not recurse into subdirectories. Manifest paths are
-relative to the directory. When rendering one directory, `title` supplies PDF
-metadata unless `--title` overrides it.
+relative to the directory. `title` supplies PDF metadata unless `--title`
+overrides it.
 
 The prelude contains shared declarations, such as colors, data, and JSX helpers:
 
@@ -234,12 +235,10 @@ function Page({ children }) {
 Each prelude is evaluated once per command. Its top-level bindings are available
 to each slide, along with the usual core and math helpers. Slides have separate
 local declarations and may be bare JSX or JavaScript that returns an element.
-Rendering a slide individually also loads the prelude from the `index.json`
-beside it, including for SVG, PNG, and terminal previews:
-
-```sh
-gum slides/figure.jsx -o figure.svg
-```
+Manifest and prelude handling applies to directory input. A single file or stdin
+uses ordinary core and math bindings without loading neighboring `index.json`
+files. A slide rendered as an individual file must be self-contained. Pass the
+deck directory to use its prelude.
 
 ## Development and visual reports
 

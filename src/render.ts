@@ -23,6 +23,8 @@ type RenderOptions = {
   stats?: boolean
 }
 
+type GumOptions = RenderOptions & { natural?: boolean }
+
 const formats = ['kitty', 'svg', 'png', 'pdf', 'tree', 'json']
 
 // CLI sizes are explicit pixels; raster ratio is independent of the layout viewport.
@@ -71,15 +73,17 @@ function output_format(values: RenderOptions): string {
   return format
 }
 
-function layout(value: unknown, values: RenderOptions, fallback = false) {
+function layout(value: unknown, values: RenderOptions) {
   const { width, height } = values
   const format = output_format(values)
   // A finite offer lets unsized figures lay out; it does not clip tall documents
   // or replace source dimensions. A single explicit axis leaves the other natural.
-  const use_fallback = fallback && width === undefined && height === undefined
+  const { width0, height0 } = (width === undefined && height === undefined) ?
+    { width0: available(640), height0: available(480) } :
+    { width0: undefined, height0: undefined }
   const request = make_request({
-    width: width === undefined ? use_fallback ? available(640) : undefined : exact(width),
-    height: height === undefined ? use_fallback ? available(480) : undefined : exact(height),
+    width: width === undefined ? width0 : exact(width),
+    height: height === undefined ? height0 : exact(height),
   })
   return layout_element(value, {
     request,
@@ -90,9 +94,9 @@ function layout(value: unknown, values: RenderOptions, fallback = false) {
 }
 
 // Both authoring commands share layout and the selected export backend.
-async function render(value: unknown, values: RenderOptions, fallback = false): Promise<void> {
+async function render(value: unknown, values: RenderOptions): Promise<void> {
   const format = output_format(values)
-  const result = layout(value, values, fallback)
+  const result = layout(value, values)
   let output: string | Uint8Array
   if (result.kind === 'value') output = format_value(result.value) + '\n'
   else if (format === 'tree') output = inspect_fragment(result.fragment, {
@@ -148,4 +152,4 @@ async function run(program: Command): Promise<void> {
 }
 
 export { render, layout, output_format, output_options, number_option, run }
-export type { RenderOptions }
+export type { RenderOptions, GumOptions }
