@@ -1,5 +1,5 @@
 import { extname, join, resolve } from 'node:path'
-import { statSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, statSync, readdirSync, readFileSync } from 'node:fs'
 import { Command, Option, InvalidArgumentError } from 'commander'
 
 import type { OutputPrecision, ThemeName } from '@gum-jsx/core'
@@ -81,7 +81,7 @@ function index_deck(directory: string): DeckIndex {
 
   // load and validate index
   const path = join(directory, 'index.json')
-  const index = JSON.parse(readFileSync(path, 'utf8'))
+  const index = existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : {}
   if (index === null || typeof index !== 'object' || Array.isArray(index)) {
     throw new Error(`${path}: expected an object`)
   }
@@ -116,14 +116,17 @@ function infer_format(format0: string | undefined, output: string | undefined): 
 function validate_inputs(files: string[], values: RenderOptions): GumInput {
   const multiFile = files.length > 1
   const hasDir = files.some(file => file !== '-' && statSync(file).isDirectory())
-  const format0 = values.format ?? ((hasDir || multiFile) ? 'pdf' : undefined)
 
   // invalid input combos
   if (hasDir && multiFile) {
     throw new Error('Cannot mix directories and files')
   }
-  if (format0 !== 'pdf' && (hasDir || multiFile)) {
-    throw new Error('Cannot mix multiple files with non-PDF output')
+  if (multiFile && files.includes('-')) {
+    throw new Error('Cannot mix stdin with multiple files')
+  }
+  const format = infer_format(values.format ?? ((hasDir || multiFile) && !values.output ? 'pdf' : undefined), values.output)
+  if (format !== 'pdf' && (hasDir || multiFile)) {
+    throw new Error('Directories and multiple files require PDF output')
   }
 
   // two deck cases
@@ -135,7 +138,6 @@ function validate_inputs(files: string[], values: RenderOptions): GumInput {
 
   // one file case
   const file = files[0]
-  const format = infer_format(format0, values.output)
 
   // return inputs
   return { multi: false, format, file } as FileInput

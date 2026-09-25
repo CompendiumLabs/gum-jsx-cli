@@ -317,6 +317,8 @@ test('themes honor source selection, CLI overrides, and explicit JSX paints', as
       <Text color="tomato">Explicit</Text>
     </HStack>
   </Svg>`
+  await Bun.write(join(scratch, 'theme-deck', 'first.jsx'), source)
+  await Bun.write(join(scratch, 'theme-deck', 'second.jsx'), source)
   for (const [args, theme] of [[[], 'dark'], [['--theme', 'light'], 'light']] as const) {
     const result = await cli(['-f', 'json', ...args], source, 'cli')
     expect(result.code).toBe(0)
@@ -326,6 +328,11 @@ test('themes honor source selection, CLI overrides, and explicit JSX paints', as
     const fills = drawings(fragment).filter(draw => draw.kind === 'path').map(draw => draw.fill)
     expect(fills).toContain(THEMES[theme].foreground)
     expect(fills).toContain('tomato')
+    for (const inputs of [['theme-deck'], ['theme-deck/first.jsx', 'theme-deck/second.jsx']]) {
+      const deck = await cli([...inputs, ...args], '', 'cli')
+      expect(deck.code, deck.error).toBe(0)
+      expect<Uint8Array>(deck.bytes).toEqual(render_pdf([fragment, fragment]))
+    }
   }
   const transparent = await cli(['-f', 'json', '--background', 'none'], source, 'cli')
   expect(transparent.code).toBe(0)
@@ -408,19 +415,38 @@ const slide = (width: number, height = 40) => `<Svg width={px(${width})} height=
   <Rect fill="red" />
 </Svg>`
 
-test('extra input arguments are rejected before evaluation or overwriting output', async () => {
+test('multiple JSX files render PDF pages in argument order', async () => {
+  await Bun.write(join(scratch, 'multi-first.jsx'), slide(80))
+  await Bun.write(join(scratch, 'multi-second.jsx'), slide(120))
+  for (const options of [[], ['-f', 'pdf'], ['-o', 'multi.pdf'], ['-o', 'multi.svg', '-f', 'pdf']]) {
+    const result = await cli(['multi-second.jsx', 'multi-first.jsx', '--title', 'Inline deck', ...options], '', 'cli')
+    expect(result.code, result.error).toBe(0)
+    expect(result.error).toBe('')
+    const output = options.includes('-o') ? await Bun.file(join(scratch, options[1]!)).text() : result.text
+    expect(output).toStartWith('%PDF-')
+    expect(pdf_sizes(output)).toEqual([[90, 30], [60, 30]])
+    expect(pdf_title(output)).toBe('Inline deck')
+  }
+})
+
+test('invalid multiple inputs are rejected before evaluation or overwriting output', async () => {
   await Bun.write(join(scratch, 'first.jsx'), 'throw new Error("Unexpected evaluation")')
   await Bun.write(join(scratch, 'second.jsx'), slide(120))
   mkdirSync(join(scratch, 'extra-deck'))
   const output = join(scratch, 'extra-inputs.pdf')
   await Bun.write(output, 'keep me')
-  for (const inputs of [
-    ['first.jsx', 'second.jsx'], ['first.jsx', 'extra-deck'], ['extra-deck', 'first.jsx'],
-    ['extra-deck', 'extra-deck'], ['first.jsx', '-'], ['-', 'first.jsx'], ['-', '-'],
-  ]) {
+  for (const [inputs, message] of [
+    [['first.jsx', 'second.jsx', '-f', 'svg'], 'require PDF output'],
+    [['first.jsx', 'extra-deck'], 'Cannot mix directories and files'],
+    [['extra-deck', 'first.jsx'], 'Cannot mix directories and files'],
+    [['extra-deck', 'extra-deck'], 'Cannot mix directories and files'],
+    [['first.jsx', '-'], 'Cannot mix stdin with multiple files'],
+    [['-', 'first.jsx'], 'Cannot mix stdin with multiple files'],
+    [['-', '-'], 'Cannot mix stdin with multiple files'],
+  ] as const) {
     const result = await cli([...inputs, '-o', output], slide(40), 'cli')
     expect(result.code).toBe(1)
-    expect(result.error).toContain('too many arguments')
+    expect(result.error).toContain(message)
     expect(result.text).toBe('')
     expect(await Bun.file(output).text()).toBe('keep me')
   }
@@ -532,8 +558,10 @@ test('invalid decks and non-PDF deck output fail without overwriting output', as
     expect(result.text).toBe('')
     expect(await Bun.file(output).text()).toBe('keep me')
   }
-  const inferred = await cli(['invalid-deck', '-o', 'deck.svg'], '', 'cli')
-  expect(inferred.code).toBe(1)
-  expect(inferred.error).toContain('require PDF output')
-  expect(await Bun.file(join(scratch, 'deck.svg')).exists()).toBe(false)
+  for (const inputs of [['invalid-deck'], ['invalid-deck/good.jsx', 'invalid-deck/bad.jsx']]) {
+    const inferred = await cli([...inputs, '-o', 'deck.svg'], '', 'cli')
+    expect(inferred.code).toBe(1)
+    expect(inferred.error).toContain('require PDF output')
+    expect(await Bun.file(join(scratch, 'deck.svg')).exists()).toBe(false)
+  }
 })

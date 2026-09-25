@@ -96,7 +96,7 @@ printf '%s\n' '<Square width={px(40)} fill="tomato" />' | gum -f svg
 `gum` reads from stdin if you omit the input or pass `-`. Input and output paths
 are relative to the directory where you run the command. An output extension
 selects SVG, PNG, or PDF. For a file or stdin, `gum` defaults to kitty graphics
-on stdout; directory input defaults to PDF. Use `-f svg` to send SVG text to
+on stdout; directories and multiple files default to PDF. Use `-f svg` to send SVG text to
 stdout. The full options and the other two
 commands are below.
 
@@ -106,13 +106,13 @@ the renderer. The CLI bundles the renderers you need for these commands.
 
 ## Usage
 
-Run `gum [options] [file]` with one input:
+Run `gum [options] [files...]`:
 
 | Option | Meaning |
 |---|---|
-| `file` | One JSX file or deck directory; omit or use `-` for stdin. |
+| `files...` | JSX files or one deck directory; omit or use `-` for stdin. |
 | `--plugin <module>` | Load extra named bindings from a package or local module; repeat to load more. |
-| `-f, --format <format>` | Output format: `kitty`, `svg`, `png`, `pdf`, `tree`, or `json`. Defaults to kitty or the output extension for a file; directories use PDF. |
+| `-f, --format <format>` | Output format: `kitty`, `svg`, `png`, `pdf`, `tree`, or `json`. Defaults to kitty or the output extension for a file; directories and multiple files require PDF. |
 | `-o, --output <file>` | Write to a file instead of stdout. |
 | `-W, --width <pixels>` | Set the viewport width. |
 | `-H, --height <pixels>` | Set the viewport height. |
@@ -148,7 +148,7 @@ coordinates and regions extending outside the image are supported.
 
 An explicit format takes precedence over the output filename. Otherwise the
 output extension selects the format. For a file or stdin, stdout defaults to
-kitty, including when redirected or piped; directory input defaults to PDF.
+kitty, including when redirected or piped; directories and multiple files default to PDF.
 Use `-f svg` for SVG on stdout, `-f pdf` for binary PDF on
 stdout, or `-o figure.svg` / `-o figure.png` /
 `-o figure.pdf` to select a file format automatically.
@@ -222,17 +222,18 @@ available to a file, stdin, or every prelude and slide in a deck.
 
 ## Multipage PDFs and decks
 
-Pass one directory containing slides to render a multipage PDF:
+Pass JSX files in page order or one directory containing slides to render a multipage PDF:
 
 ```sh
+gum intro.jsx figure.jsx conclusion.jsx -o talk.pdf
 gum slides/ -o talk.pdf
 gum slides/ > talk.pdf
 ```
 
-Directory input defaults to PDF; other output formats are rejected. Each slide
+Directories and multiple files default to PDF; other output formats are rejected. Each slide
 becomes one page with its own viewport size; `-W` and `-H` apply to every page.
-Long content is not automatically split across pages. The CLI accepts one input
-path; put multiple figures in a deck directory to combine them into a PDF.
+Long content is not automatically split across pages. Directories and stdin
+cannot be combined with other inputs.
 
 A directory can contain an optional `index.json`:
 
@@ -268,7 +269,7 @@ function Page({ children }) {
 Each prelude is evaluated once per command. Its top-level bindings are available
 to each slide, along with the usual core and math helpers. Slides have separate
 local declarations and may be bare JSX or JavaScript that returns an element.
-Manifest and prelude handling applies to directory input. A single file or stdin
+Manifest and prelude handling applies to directory input. Explicit files or stdin
 uses ordinary core and math bindings without loading neighboring `index.json`
 files. A slide rendered as an individual file must be self-contained. Pass the
 deck directory to use its prelude.

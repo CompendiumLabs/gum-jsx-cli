@@ -14,6 +14,7 @@ const DEFAULT_HEIGHT = 480
 
 type LayoutOptions = {
   theme?: ThemeName
+  defaultTheme?: ThemeName
   width?: number
   height?: number
 }
@@ -25,7 +26,7 @@ function format_value(value: unknown): string {
 
 // A finite offer lets unsized figures lay out; it does not clip tall documents
 // or replace source dimensions. A single explicit axis leaves the other natural.
-function layout(value: unknown, { theme, width, height }: LayoutOptions): LayoutElementResult {
+function layout(value: unknown, { theme, defaultTheme, width, height }: LayoutOptions): LayoutElementResult {
   const { width0, height0 } = (width === undefined && height === undefined) ?
     { width0: available(DEFAULT_WIDTH), height0: available(DEFAULT_HEIGHT) } :
     { width0: undefined, height0: undefined }
@@ -35,7 +36,7 @@ function layout(value: unknown, { theme, width, height }: LayoutOptions): Layout
   })
   return layout_element(value, {
     request,
-    defaults: { theme },
+    defaults: { theme: defaultTheme },
     overrides: { theme },
     fonts: createMathFonts(),
   })
