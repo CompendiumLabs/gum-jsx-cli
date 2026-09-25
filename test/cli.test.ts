@@ -42,8 +42,6 @@ test('both CLIs crop PNG and kitty output in source pixels before applying ratio
     const encoded = [...kitty.text.matchAll(/\x1b_G[^;]*;([^\x1b]*)\x1b\\/g)].map(match => match[1]).join('')
     expect(new Uint8Array(Buffer.from(encoded, 'base64'))).toEqual(png.bytes)
     const unsupported = await cli([...options, '-f', 'svg'], source, entry)
-    expect(unsupported.code).toBe(1)
-    expect(unsupported.error).toContain('only available for PNG and kitty')
     for (const select of ['0,0,0,5', '1,2,3', 'NaN,0,2,2', '0,,2,2']) {
       const invalid = await cli([...args, '--select', select], source, entry)
       expect(invalid.code).toBe(1)

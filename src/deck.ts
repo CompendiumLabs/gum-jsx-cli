@@ -1,61 +1,31 @@
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { Evaluator } from '@gum-jsx/core'
-import type { Fragment, LayoutPass } from '@gum-jsx/core'
 import { render_pdf } from '@gum-jsx/pdf'
 import { layout } from './render'
-import type { GumOptions } from './render'
 
-type DeckIndex = { title?: string; prelude?: string; slides?: string[] }
+import type { Fragment, LayoutPass } from '@gum-jsx/core'
+import type { RenderOptions, DeckIndex } from './args'
+import type { LayoutOptions } from './render'
+
 type DeckFragment = Readonly<{ kind: "fragment"; fragment: Fragment; pass: LayoutPass; }>
 type DeckResult = { results: DeckFragment[]; title?: string }
 
-function read_index(dir: string): DeckIndex {
-  const path = join(dir, 'index.json')
-  if (!existsSync(path)) return {}
-  const index = JSON.parse(readFileSync(path, 'utf8'))
-  if (index === null || typeof index !== 'object' || Array.isArray(index)) {
-    throw new Error(`${path}: expected an object`)
-  }
-  for (const key of ['title', 'prelude'] as const) {
-    if (index[key] !== undefined && typeof index[key] !== 'string') {
-      throw new Error(`${path}: "${key}" must be a string`)
-    }
-  }
-  if (index.slides !== undefined && !(Array.isArray(index.slides)
-    && index.slides.every((slide: unknown) => typeof slide === 'string' && slide.length > 0))) {
-    throw new Error(`${path}: "slides" must be a list of filenames`)
-  }
-  return index
-}
-
-function load_deck(directory: string): DeckIndex {
-  const dir = resolve(directory), index = read_index(dir)
-  const prelude = index.prelude === undefined ? undefined : resolve(dir, index.prelude)
-  const files = index.slides ?? readdirSync(dir, { withFileTypes: true })
-    .filter(entry => entry.isFile() && entry.name.endsWith('.jsx') && resolve(dir, entry.name) !== prelude)
-    .map(entry => entry.name)
-    .sort((a, b) => a.localeCompare(b, 'en', { numeric: true }))
-  if (files.length === 0) throw new Error(`${directory}: no slides to render`)
-  return { title: index.title, prelude, slides: files.map(file => resolve(dir, file)) }
-}
-
 // Evaluate the deck's prelude once; each slide keeps its own local declarations.
-function evaluate_deck(deck: DeckIndex, evaluator: Evaluator, values: GumOptions): DeckResult {
+function layout_deck(deck: DeckIndex, evaluator: Evaluator, options: LayoutOptions): DeckResult {
   const { title, prelude, slides = [] } = deck
   const scope = prelude === undefined ? undefined
     : evaluator.evaluate_prelude(readFileSync(prelude, 'utf8'), { name: prelude })
   const results = slides.map(file => {
     const src = readFileSync(file, 'utf8')
     const tree = evaluator.evaluate(src, { name: file, scope })
-    const result = layout(tree, values)
+    const result = layout(tree, options)
     if (result.kind !== 'fragment') throw new Error(`${file}: PDF pages must return a Gum element`)
     return result
   })
   return { results, title }
 }
 
-async function render_deck(result: DeckResult, values: GumOptions): Promise<void> {
+function render_deck(result: DeckResult, values: RenderOptions) {
   const { results, title } = result
   const output = render_pdf(results.map(result => result.fragment), {
     background: values.background,
@@ -74,5 +44,5 @@ async function render_deck(result: DeckResult, values: GumOptions): Promise<void
   }
 }
 
-export { load_deck, evaluate_deck, render_deck }
-export type { DeckIndex as Deck }
+export { layout_deck, render_deck }
+export type { DeckIndex }

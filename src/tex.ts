@@ -4,8 +4,10 @@ import { readFileSync } from 'node:fs'
 import { Command, InvalidArgumentError } from 'commander'
 import { px, em } from '@gum-jsx/core'
 import { mathToElement } from '@gum-jsx/math'
-import { output_options, render, number_option, run } from './render'
-import type { RenderOptions } from './render'
+import { output_options, number_option, infer_format, run } from './args'
+import { layout, render } from './render'
+
+import type { RenderOptions } from './args'
 
 type TexOptions = RenderOptions & {
   input?: string
@@ -27,10 +29,12 @@ function macro_option(value: string, previous: Record<string, string>): Record<s
   return { ...previous, [name]: value.slice(split + 1) }
 }
 
-const program = output_options(new Command()
+const program0 = new Command()
   .name('gum-tex')
   .description('Render a TeX formula. Natural exports include the formula’s logical box and visible ink.')
-  .argument('[tex]', 'Literal TeX (omit or use - for stdin)'))
+  .argument('[tex]', 'Literal TeX (omit or use - for stdin)')
+
+const program = output_options(program0)
   .option('-i, --input <file>', 'Read TeX from a file (- for stdin)')
   .option('-s, --font-size <pixels>', 'Font size in pixels', value => {
     const size = number_option(value, 'font size')
@@ -45,17 +49,32 @@ const program = output_options(new Command()
   .option('--fit', 'Allow enlargement to fill --width/--height (default: shrink only)')
   .option('--no-fit', 'Keep the original formula size and clip at --width/--height')
   .addHelpText('after', '\nExamples:\n  gum-tex "x^2" -o formula.svg\n  gum-tex "x^2" -o formula.pdf\n  gum-tex "x^2" --theme dark\n  gum-tex "x^2" --theme light --background white -o formula.png\n  gum-tex -i formula.tex -s 48 -p 0.25 -o formula.png\n  gum-tex "x^2" --fit -W 320\n')
-  .action(async (tex: string | undefined, values: TexOptions) => {
+  .action((tex: string | undefined, values: TexOptions) => {
+    // validate options
     if (values.input !== undefined && tex !== undefined) throw new Error('Use literal TeX or --input, not both')
     if (values.fit && values.width === undefined && values.height === undefined) {
       throw new Error('--fit requires --width or --height')
     }
+
+    // get input data
     const text = values.input !== undefined ? readFileSync(values.input === '-' ? 0 : values.input, 'utf8')
       : tex === undefined || tex === '-' ? readFileSync(0, 'utf8') : tex
-    const element = mathToElement(text, { font_size: px(values.fontSize), padding: em(values.padding),
-      inline: values.inline, strut: values.strut, color: values.color, macros: values.macro,
-      fit: values.fit === true ? 'contain' : values.fit })
-    await render(element, values)
+    const format = infer_format(values.format, values.output)
+    const theme = values.theme ?? (format == 'kitty' ? 'dark' : 'light')
+    const options = { width: values.width, height: values.height, theme }
+
+    // evaluate, layout, render
+    const tree = mathToElement(text, {
+      font_size: px(values.fontSize),
+      padding: em(values.padding),
+      inline: values.inline,
+      strut: values.strut,
+      color: values.color,
+      macros: values.macro,
+      fit: values.fit === true ? 'contain' : values.fit
+    })
+    const result = layout(tree, options)
+    render(result, format, values)
   })
 
 await run(program)
