@@ -190,14 +190,16 @@ workspace test command.
 
 ## Plugins
 
-Core bindings are always available, and math is the default bundled plugin.
+Core bindings are always available, and math and maps are bundled by default.
+Map elements and helpers such as `GeoMap`, `world_countries()`, and `us_states()`
+are available without a `--plugin` flag.
 Use `--plugin` to add elements, helpers, or data from installed packages or local
 JavaScript/TypeScript modules:
 
 ```sh
-gum figure.jsx --plugin @gum-jsx/maps -o figure.svg
+gum figure.jsx --plugin ./elements.ts -o figure.svg
 gum slides/ --plugin ./elements.ts -o talk.pdf
-gum figure.jsx --plugin @gum-jsx/maps --plugin ./elements.ts -o figure.svg
+gum figure.jsx --plugin ./elements.ts --plugin ./colors.ts -o figure.svg
 ```
 
 Plugin names and paths resolve from the current working directory, including
@@ -214,7 +216,7 @@ export const accent = 'tomato'
 ```
 
 Source can then use `<Tile fill={accent} />`. Named exports are merged after math
-in command-line order, so later plugins override earlier bindings. Default
+and maps in command-line order, so later plugins override earlier bindings. Default
 exports are ignored. Plugins load before evaluation, and the same bindings are
 available to a file, stdin, or every prelude and slide in a deck.
 

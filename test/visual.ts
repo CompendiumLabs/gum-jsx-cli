@@ -2,9 +2,9 @@
 
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve } from 'node:path'
-import { available, evaluate, LayoutPass, layout_element, make_request, render_svg } from '@gum-jsx/core'
-import * as math from '@gum-jsx/math'
+import { available, LayoutPass, layout_element, make_request, render_svg } from '@gum-jsx/core'
 import { createMathFonts } from '@gum-jsx/math'
+import { create_evaluator } from '../src/plugins'
 import {
   elementsCodeDir,
   packageRoot as docsRoot,
@@ -54,6 +54,7 @@ function errorMessage(error: unknown): string {
 const workspaceRoot = dirname(docsRoot)
 const canvas = { width: 640, height: 480 }
 const fonts = createMathFonts()
+const evaluator = await create_evaluator()
 const pass = new LayoutPass({ fonts: { value: fonts, version: fonts.version } })
 
 function renderExample(group: string, path: string): Entry {
@@ -69,7 +70,7 @@ function renderExample(group: string, path: string): Entry {
   }
   try {
     if (!code.startsWith('// ')) throw new Error('Visual examples must start with a descriptive comment')
-    const element = evaluate(code, { name: path, scope: math, seed: 1 })
+    const element = evaluator.evaluate(code, { name: path, seed: 1 })
     const result = layout_element(element, {
       pass,
       request: make_request({ width: available(canvas.width), height: available(canvas.height) }),

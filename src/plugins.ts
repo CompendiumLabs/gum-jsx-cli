@@ -1,9 +1,10 @@
 import { Evaluator } from '@gum-jsx/core'
 import * as math from '@gum-jsx/math'
+import * as maps from '@gum-jsx/maps'
 
-// Math is bundled with the CLI; additional plugins come from the caller's project.
+// Math and maps are bundled with the CLI; additional plugins come from the caller's project.
 async function create_evaluator(plugins: readonly string[] = []): Promise<Evaluator> {
-  let scope: Record<string, unknown> = { ...math }
+  let scope: Record<string, unknown> = { ...math, ...maps }
   for (const plugin of plugins) {
     try {
       const entry = Bun.resolveSync(plugin, process.cwd())
