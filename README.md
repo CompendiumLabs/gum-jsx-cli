@@ -116,7 +116,6 @@ Run `gum [options] [files...]`:
 | `-o, --output <file>` | Write to a file instead of stdout. |
 | `-W, --width <pixels>` | Set the viewport width. |
 | `-H, --height <pixels>` | Set the viewport height. |
-| `--natural` | Measure without the default 640 × 480 offer. |
 | `-r, --ratio <number>` | PNG/kitty sampling ratio, default `1`. |
 | `--select <x,y,width,height>` | Crop PNG/kitty to a box in source pixels. |
 | `-b, --background <color>` | Paint the viewport background. |
@@ -131,8 +130,8 @@ Omit the input file or use `-` to read stdin. A bare element is wrapped in `Svg`
 `-W` / `--width` and `-H` / `--height` are independent pixel overrides; `-h`
 remains the help shortcut. With neither override, `gum` offers 640 × 480 pixels
 so unsized canvases can render. This is an advisory budget: explicit source sizes
-still win, short content hugs, and tall documents can grow vertically. Use
-`--natural` to disable this fallback. With either override, the other axis retains
+still win, short content hugs, and tall documents can grow vertically.
+With either override, the other axis retains
 source sizing or hugs content, allowing `-W 320` to reflow a document and an
 aspect ratio to determine a figure's height. `gum-tex` retains natural sizing.
 Zero is a valid viewport dimension for SVG, tree, and
@@ -343,7 +342,7 @@ Literal input and `--input` are mutually exclusive. Supply formula contents
 without `$` or `$$` delimiters. Quote shell input with single quotes to preserve
 backslashes; use `--` before a formula starting with a dash.
 
-The shared output options above apply to both commands; `--natural` is JSX-only. TeX adds:
+The shared output options above apply to both commands. TeX adds:
 
 | Option | Meaning |
 |---|---|
