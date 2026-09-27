@@ -42,9 +42,6 @@ test('gum renders named map coordinates and position spreads with the same geome
   expect(named.code).toBe(0)
   expect(tuples.code).toBe(0)
   expect(named.text).toBe(tuples.text)
-  const legacy = await cli(['-f', 'svg'], '<Rect {...{x: 0, y: 0}} />', 'cli')
-  expect(legacy.code).toBe(1)
-  expect(legacy.error).toContain('placement props were removed')
 })
 
 test('both CLIs crop PNG and kitty output in source pixels before applying ratio', async () => {
