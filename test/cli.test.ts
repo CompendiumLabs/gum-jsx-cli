@@ -29,6 +29,24 @@ function png_size(bytes: Uint8Array) {
   return { width: view.getUint32(16), height: view.getUint32(20) }
 }
 
+test('gum renders named map coordinates and position spreads with the same geometry as tuples', async () => {
+  const source = `
+    const position = {lon: 30, lat: 20}
+    return <GeoMap source={world_countries({ids: []})} width={px(120)} height={px(80)}>
+      <Rect {...{pos: position}} width={px(4)} height={px(6)} />
+      <Points points={[position]} point-size={px(8)} />
+    </GeoMap>
+  `
+  const named = await cli(['-f', 'svg'], source, 'cli')
+  const tuples = await cli(['-f', 'svg'], source.replace('{lon: 30, lat: 20}', '[30, 20]'), 'cli')
+  expect(named.code).toBe(0)
+  expect(tuples.code).toBe(0)
+  expect(named.text).toBe(tuples.text)
+  const legacy = await cli(['-f', 'svg'], '<Rect {...{x: 0, y: 0}} />', 'cli')
+  expect(legacy.code).toBe(1)
+  expect(legacy.error).toContain('placement props were removed')
+})
+
 test('both CLIs crop PNG and kitty output in source pixels before applying ratio', async () => {
   for (const entry of ['cli', 'tex']) {
     const args = entry === 'tex' ? ['x^2'] : []

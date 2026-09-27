@@ -2,8 +2,7 @@
 <Svg width={px(1000)} height={px(333)}>
   <Group width="fill" height="fill">
     <Text
-      x={px(47)}
-      y={px(24)}
+      pos={[px(47), px(24)]}
       font-size={px(240)}
       font-weight={bold}
       color="theme:foreground"
@@ -11,16 +10,14 @@
       gum
     </Text>
     <Circle
-      x={px(583)}
-      y={px(224)}
+      pos={[px(583), px(224)]}
       anchor="center"
       width={px(48)}
       fill={blue}
       stroke={none}
     />
     <Text
-      x={px(630)}
-      y={px(24)}
+      pos={[px(630), px(24)]}
       font-size={px(240)}
       font-weight={bold}
       color="theme:foreground"
