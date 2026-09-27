@@ -2,7 +2,7 @@
 <Svg width={px(1000)} height={px(333)}>
   <Group width="fill" height="fill">
     <Text
-      pos={[px(47), px(24)]}
+      pos={[px(47), px(24)]} anchor="start"
       font-size={px(240)}
       font-weight={bold}
       color="theme:foreground"
@@ -17,7 +17,7 @@
       stroke={none}
     />
     <Text
-      pos={[px(630), px(24)]}
+      pos={[px(630), px(24)]} anchor="start"
       font-size={px(240)}
       font-weight={bold}
       color="theme:foreground"
