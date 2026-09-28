@@ -2,7 +2,7 @@ import { extname, join, resolve } from 'node:path'
 import { existsSync, statSync, readdirSync, readFileSync } from 'node:fs'
 import { Command, Option, InvalidArgumentError } from 'commander'
 
-import type { OutputPrecision, ThemeName } from '@gum-jsx/core'
+import type { OutputPrecision, ThemeName, TextRenderMode } from '@gum-jsx/core'
 import type { PngEncoding, RasterSelection } from '@gum-jsx/png'
 
 const FORMATS = ['kitty', 'svg', 'png', 'pdf', 'tree', 'json'] as const
@@ -15,6 +15,7 @@ type RenderOptions = {
   height?: number
   ratio: number
   pngEncoding?: PngEncoding
+  textMode?: TextRenderMode
   select?: RasterSelection
   background?: string
   theme?: ThemeName
@@ -161,6 +162,8 @@ function output_options(program: Command): Command {
     .option('--title <text>', 'Set the SVG or PDF document title')
     .option('--id-prefix <name>', 'Prefix SVG definition IDs', 'gum')
     .option('--precision <digits|full>', 'Output decimal places (0–100; default: 10)', precision_option)
+    .addOption(new Option('--text-mode <mode>', 'Ordinary text in SVG/PNG/kitty (live needs host fonts; PDF keeps paths)')
+      .choices(['path', 'live']).default('path'))
     .option('--stats', 'Print layout counters to stderr')
 }
 

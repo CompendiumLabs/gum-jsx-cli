@@ -6,7 +6,7 @@ import { rasterize_svg } from '@gum-jsx/png'
 import { render_pdf } from '@gum-jsx/pdf'
 import { format_image } from './kitty'
 
-import type { ThemeName, LayoutElementResult } from '@gum-jsx/core'
+import type { ThemeName, LayoutElementResult, TextRenderMode } from '@gum-jsx/core'
 import type { RenderOptions } from './args'
 
 const DEFAULT_WIDTH = 640
@@ -17,6 +17,7 @@ type LayoutOptions = {
   defaultTheme?: ThemeName
   width?: number
   height?: number
+  textMode?: TextRenderMode
 }
 
 // Sources that return a plain value print it as text: strings verbatim, the rest as JSON.
@@ -26,7 +27,7 @@ function format_value(value: unknown): string {
 
 // A finite offer lets unsized figures lay out; it does not clip tall documents
 // or replace source dimensions. A single explicit axis leaves the other natural.
-function layout(value: unknown, { theme, defaultTheme, width, height }: LayoutOptions): LayoutElementResult {
+function layout(value: unknown, { theme, defaultTheme, width, height, textMode }: LayoutOptions): LayoutElementResult {
   const { width0, height0 } = (width === undefined && height === undefined) ?
     { width0: available(DEFAULT_WIDTH), height0: available(DEFAULT_HEIGHT) } :
     { width0: undefined, height0: undefined }
@@ -39,6 +40,7 @@ function layout(value: unknown, { theme, defaultTheme, width, height }: LayoutOp
     defaults: { theme: defaultTheme },
     overrides: { theme },
     fonts: createMathFonts(),
+    text_mode: textMode,
   })
 }
 

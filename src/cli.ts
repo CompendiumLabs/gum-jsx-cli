@@ -33,7 +33,8 @@ const program = output_options(program0)
     } else {
       const { file, format } = inputs
       const defaultTheme = format == 'kitty' ? 'dark' : 'light'
-      const options: LayoutOptions = { theme: values.theme, defaultTheme, width: values.width, height: values.height }
+      const options: LayoutOptions = { theme: values.theme, defaultTheme, width: values.width, height: values.height,
+        textMode: format === 'pdf' ? 'path' : values.textMode }
       const name = file === '-' ? 'stdin.jsx' : resolve(file)
       const source = readFileSync(file === '-' ? 0 : file, 'utf8')
       const tree = evaluator.evaluate(source, { name })

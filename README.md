@@ -66,6 +66,7 @@ Save this as `plot.jsx`:
 
 ```sh
 gum plot.jsx -o plot.svg
+gum plot.jsx -o plot.svg --text-mode live
 gum plot.jsx -o plot.png --ratio 2
 gum plot.jsx -o plot.png --png-encoding standard
 gum plot.jsx -o plot.pdf
@@ -129,6 +130,7 @@ Run `gum [options] [files...]`:
 | `--title <text>` | Set the SVG or PDF document title. |
 | `--id-prefix <name>` | Prefix SVG definition IDs, default `gum`. |
 | `--precision <digits\|full>` | Output decimal places from 0 to 100, or `full`; default `10`. |
+| `--text-mode <path\|live>` | Ordinary text as glyph paths (default) or live SVG text. Math and PDF retain paths. |
 | `--stats` | Print layout counters to stderr. |
 | `-h, --help` | Show command help. |
 
@@ -171,8 +173,12 @@ in JSX still apply and paint over the render backdrop. See
 
 PNG and kitty use node-canvas through `@gum-jsx/png`, loaded only for these
 formats. Ordinary text is already SVG glyph paths and needs no font registration.
-Emoji remain live SVG text and
-depend on the rasterizer's available fonts.
+With `--text-mode live`, ordinary text also stays live, preserving Gum's line
+breaks and positions. The SVG viewer or PNG/kitty rasterizer must have matching
+fonts available; the flag does not embed or install fonts. Live output can have
+different glyph rendering in different hosts. Emoji always remain live SVG text
+and depend on the rasterizer's available fonts. Both `gum` and `gum-tex` accept
+the option; math continues to use outlines, including text inside TeX formulas.
 
 PDF uses `@gum-jsx/pdf`, loaded only for this format. It writes vector
 pages sized to their viewports at 96 pixels per inch (0.75 PDF points per pixel).

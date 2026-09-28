@@ -61,7 +61,8 @@ const program = output_options(program0)
       : tex === undefined || tex === '-' ? readFileSync(0, 'utf8') : tex
     const format = infer_format(values.format, values.output)
     const theme = values.theme ?? (format == 'kitty' ? 'dark' : 'light')
-    const options = { width: values.width, height: values.height, theme }
+    const options = { width: values.width, height: values.height, theme,
+      textMode: format === 'pdf' ? 'path' as const : values.textMode }
 
     // evaluate, layout, render
     const tree = mathToElement(text, {

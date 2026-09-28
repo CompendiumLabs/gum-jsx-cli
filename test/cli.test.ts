@@ -94,6 +94,37 @@ test('PNG encoding presets reach file and terminal output in both CLIs', async (
   }
 })
 
+test('text mode defaults to paths and supports live prose while keeping math and PDF outlined', async () => {
+  const source = '<Text>Live <Span font-weight="bold">prose</Span> <Latex>x^2</Latex></Text>'
+  const args = ['-f', 'svg', '-W', '320', '-H', '100']
+  const standard = await cli(args, source, 'cli')
+  const explicit = await cli([...args, '--text-mode', 'path'], source, 'cli')
+  const live = await cli([...args, '--text-mode', 'live'], source, 'cli')
+  for (const result of [standard, explicit, live]) expect(result.code, result.error).toBe(0)
+  expect(explicit.text).toBe(standard.text)
+  expect(standard.text).not.toContain('<text ')
+  expect(live.text).toContain('<text ')
+  expect(live.text).toContain('font-weight="700"')
+  expect(live.text).toContain('>prose</text>')
+  expect(live.text).toContain('<path ')
+  const png = await cli(['-f', 'png', '--text-mode', 'live', '-W', '320', '-H', '100'], source, 'cli')
+  expect(png.code, png.error).toBe(0)
+  expect(png_size(png.bytes)).toEqual({ width: 320, height: 100 })
+  const pdf = await cli(['-f', 'pdf', '--text-mode', 'live'], source, 'cli')
+  expect(pdf.code, pdf.error).toBe(0)
+  expect(pdf.text).toStartWith('%PDF-')
+  const math = await cli([String.raw`x+\text{words}`, '-f', 'svg', '--text-mode', 'live'])
+  expect(math.code, math.error).toBe(0)
+  expect(math.text).not.toContain('<text ')
+  expect(math.text).toContain('<path ')
+  for (const entry of ['cli', 'tex']) {
+    const invalid = await cli(['--text-mode', 'invalid'], '', entry)
+    expect(invalid.code).toBe(1)
+    expect(invalid.error).toContain('Allowed choices')
+    expect(invalid.text).toBe('')
+  }
+})
+
 test('gum-tex literal, file, and stdin match the library SVG', async () => {
   const tex = String.raw`\mathllap{x}\int_0^\infty e^{-t}\,dt`
   await Bun.write(join(scratch, 'formula.tex'), tex)
