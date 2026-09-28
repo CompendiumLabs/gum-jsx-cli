@@ -7,6 +7,7 @@ import { px, em, THEMES } from '@gum-jsx/core'
 import type { Fragment } from '@gum-jsx/core'
 import { mathToSvg } from '@gum-jsx/math'
 import { render_pdf } from '@gum-jsx/pdf'
+import { rasterize_svg } from '@gum-jsx/png'
 
 const texDefaults = { font_size: px(64) } as const
 const exportSvg = mathToSvg
@@ -62,6 +63,34 @@ test('both CLIs crop PNG and kitty output in source pixels before applying ratio
       expect(invalid.code).toBe(1)
       expect(invalid.error).toContain('select must be')
     }
+  }
+})
+
+test('PNG encoding presets reach file and terminal output in both CLIs', async () => {
+  for (const entry of ['cli', 'tex']) {
+    const args = entry === 'tex' ? ['x^2'] : []
+    const source = entry === 'cli' ? '<Text font-size={px(36)}>PNG encoding</Text>' : ''
+    const options = [...args, '--theme', 'light', '-W', '150', '-H', '50']
+    const svg = await cli([...options, '-f', 'svg'], source, entry)
+    expect(svg.code).toBe(0)
+    for (const encoding of ['fast', 'standard'] as const) {
+      const expected = rasterize_svg(svg.text, { size: { width: 150, height: 50 }, encoding })
+      const png = await cli([...options, '-f', 'png', '--png-encoding', encoding], source, entry)
+      expect(png.code, png.error).toBe(0)
+      expect(png.bytes).toEqual(new Uint8Array(expected))
+      const kitty = await cli([...options, '--png-encoding', encoding], source, entry)
+      expect(kitty.code, kitty.error).toBe(0)
+      const encoded = [...kitty.text.matchAll(/\x1b_G[^;]*;([^\x1b]*)\x1b\\/g)].map(match => match[1]).join('')
+      expect(new Uint8Array(Buffer.from(encoded, 'base64'))).toEqual(new Uint8Array(expected))
+      if (encoding === 'fast') {
+        const defaultPng = await cli([...options, '-f', 'png'], source, entry)
+        expect(defaultPng.bytes).toEqual(png.bytes)
+      }
+    }
+    const invalid = await cli([...options, '--png-encoding', 'invalid'], source, entry)
+    expect(invalid.code).toBe(1)
+    expect(invalid.text).toBe('')
+    expect(invalid.error).toContain('Allowed choices')
   }
 })
 

@@ -61,7 +61,8 @@ function render(result: LayoutElementResult, format: string, values: RenderOptio
       precision: values.precision,
     })
     if (format === 'png' || format === 'kitty') {
-      const png = rasterize_svg(output, { size: result.fragment.size, ratio: values.ratio, select: values.select })
+      const png = rasterize_svg(output, { size: result.fragment.size, ratio: values.ratio,
+        select: values.select, encoding: values.pngEncoding })
       output = format === 'kitty' ? format_image(png) + '\n' : png
     } else output += '\n'
   }

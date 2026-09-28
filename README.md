@@ -67,6 +67,7 @@ Save this as `plot.jsx`:
 ```sh
 gum plot.jsx -o plot.svg
 gum plot.jsx -o plot.png --ratio 2
+gum plot.jsx -o plot.png --png-encoding standard
 gum plot.jsx -o plot.pdf
 gum plot.jsx                 # Display inline in a kitty-compatible terminal
 ```
@@ -84,6 +85,11 @@ and the [element examples](https://github.com/CompendiumLabs/gum-jsx-docs/tree/m
 to build beyond this plot.
 
 ## Take it further
+
+PNG and kitty output use fast lossless encoding by default. Set
+`--png-encoding standard` to use the previous compression policy. Both presets
+preserve the same decoded pixels; encoded file sizes vary by image. The option
+is also available in `gum-tex`.
 
 ```sh
 gum diagram.jsx -f tree --stats            # Inspect measured layout

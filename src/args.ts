@@ -3,7 +3,7 @@ import { existsSync, statSync, readdirSync, readFileSync } from 'node:fs'
 import { Command, Option, InvalidArgumentError } from 'commander'
 
 import type { OutputPrecision, ThemeName } from '@gum-jsx/core'
-import type { RasterSelection } from '@gum-jsx/png'
+import type { PngEncoding, RasterSelection } from '@gum-jsx/png'
 
 const FORMATS = ['kitty', 'svg', 'png', 'pdf', 'tree', 'json'] as const
 type Format = typeof FORMATS[number]
@@ -14,6 +14,7 @@ type RenderOptions = {
   width?: number
   height?: number
   ratio: number
+  pngEncoding?: PngEncoding
   select?: RasterSelection
   background?: string
   theme?: ThemeName
@@ -151,6 +152,8 @@ function output_options(program: Command): Command {
     .option('-W, --width <pixels>', 'Set the viewport width', value => number_option(value, 'width'))
     .option('-H, --height <pixels>', 'Set the viewport height', value => number_option(value, 'height'))
     .option('-r, --ratio <number>', 'PNG/kitty sampling ratio', ratio_option, 1)
+    .addOption(new Option('--png-encoding <preset>', 'Lossless PNG/kitty encoding policy')
+      .choices(['fast', 'standard']).default('fast'))
     .option('--select <x,y,width,height>', 'Crop PNG/kitty to a box in source pixels', selection_option)
     .option('-b, --background <color>', 'Paint the viewport background')
     .addOption(new Option('-t, --theme <theme>', 'Render theme (default: source theme, or dark for kitty / light otherwise)')
