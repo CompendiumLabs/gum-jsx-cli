@@ -17,6 +17,7 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": [
+    "scripts/**/*.ts",
     "src/**/*.ts",
     "test/**/*.ts",
     "visual-report/**/*.ts"

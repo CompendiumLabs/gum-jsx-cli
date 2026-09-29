@@ -3,6 +3,7 @@
 import { spawnSync } from 'node:child_process'
 import { closeSync, openSync, readFileSync, writeSync } from 'node:fs'
 import { Command, InvalidArgumentError, Option } from 'commander'
+import { version } from '../package.json'
 import { displayMarkdown, queryCellSize, readStdin } from '@gum-jsx/mark'
 import type { MarkdownArgs, VirtualOptions } from '@gum-jsx/mark'
 
@@ -53,6 +54,7 @@ function displayPaged(content: string, options: MarkdownArgs): void {
 
 const program = new Command()
   .name('gum-mark')
+  .version(version)
   .description('Render Markdown with embedded gum.jsx figures and TeX math in a kitty-compatible terminal.')
   .argument('[file]', 'Markdown file (omit or use - for stdin)')
   .addOption(new Option('-t, --theme <theme>', 'Theme for gum.jsx and math')

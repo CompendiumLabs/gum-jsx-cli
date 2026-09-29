@@ -9,6 +9,8 @@
     "gum-mark": "src/mark.ts"
   },
   "scripts": {
+    "build:standalone": "bun scripts/standalone.ts",
+    "pack:standalone": "bun scripts/standalone.ts --archive",
     "gum": "bun src/cli.ts",
     "gum-mark": "bun src/mark.ts",
     "typecheck": "tsc --noEmit",

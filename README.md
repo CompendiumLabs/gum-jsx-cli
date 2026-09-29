@@ -43,6 +43,89 @@ then use `bun run gum` (or the corresponding `gum-tex` and `gum-mark` scripts).
 Rebuild `@gum-jsx/png` after changing its source; this uses the checked-in WASM
 artifact and requires no Rust toolchain.
 
+### Standalone executable
+
+From this package's directory, build `gum` with Bun 1.4.2 or newer. With no
+options, the script builds macOS ARM64, Windows x64, and Linux x64:
+
+```sh
+bun run build:standalone
+```
+
+The outputs are `dist/gum-macos-arm64`, `dist/gum-windows-x64.exe`, and
+`dist/gum-linux-x64`. Select one target with `--target`; optionally override its
+output path with `--outfile`:
+
+```sh
+bun run build:standalone --target bun-linux-x64
+bun run build:standalone --target=bun-darwin-arm64 --outfile dist/gum-macos
+```
+
+The executable includes the Bun runtime, core and math fonts, map data, and the
+PNG WebAssembly renderer. Users need no Bun installation or `node_modules` for
+built-in functionality. External `--plugin` modules and their dependencies still
+come from the user's project. This build produces only `gum`.
+
+For a local build using the installed Bun runtime, or to test a release executable:
+
+```sh
+bun run build:standalone --target native
+./dist/gum figure.jsx -o figure.png
+GUM_STANDALONE_BINARY="$PWD/dist/gum-linux-x64" bun test ./test/standalone.test.ts
+```
+
+Bun downloads the requested runtime when needed. Build a separate executable for
+each OS/architecture using [Bun's supported targets](https://bun.sh/docs/bundler/executables).
+The `native` target uses the installed Bun runtime, so distro builds can introduce
+extra shared-library dependencies; check release artifacts with `ldd` on Linux.
+The script uses Bun's `baseline` alias for `bun-linux-x64` to select the official
+download instead of reusing an identically targeted distro runtime in Bun 1.4.2.
+The official Linux x64 baseline build tested here needs glibc and standard system
+libraries, but no ICU installation. It is approximately 83 MiB (37 MiB gzipped)
+with Bun 1.4.2. Other platforms still need native testing before release.
+
+The build minifies whitespace and syntax while preserving identifier names used
+in inspection output and diagnostics. Standalone tests copy the executable to a
+temporary directory, clear `PATH`, and compare all output formats with the source
+CLI, including fonts, maps, decks, and plugins. They build only the native target
+and run as part of `bun run test`;
+`GUM_STANDALONE_BINARY` can select an already-built executable instead.
+
+### Release archives
+
+Build and package the three default targets for manual upload to GitHub Releases:
+
+```sh
+bun run pack:standalone
+```
+
+This writes these files to `dist/releases/v<package-version>/`:
+
+```text
+gum-v<version>-macos-arm64.tar.gz
+gum-v<version>-linux-x64.tar.gz
+gum-v<version>-windows-x64.zip
+SHA256SUMS
+```
+
+Each archive extracts into its own named directory containing `gum` (or
+`gum.exe`), installation notes, the project license, and dependency/font/data
+notices. Unix archives preserve the executable permission. Packaging requires
+`tar` and `zip` on the build machine; the executables do not require these tools.
+
+The same target and output options apply. For example:
+
+```sh
+bun run pack:standalone --target bun-linux-x64
+```
+
+This rebuilds and packages just that target, retaining the other archives in the
+version directory and refreshing `SHA256SUMS` for all of them. Only include
+archives you intend to release in that directory. Upload its archives and
+`SHA256SUMS` manually; the command does not publish anything or sign binaries.
+Checksums can be verified with `sha256sum -c SHA256SUMS` on Linux, or
+`shasum -a 256 -c SHA256SUMS` on macOS.
+
 ## Make your first figure
 
 Save this as `plot.jsx`:

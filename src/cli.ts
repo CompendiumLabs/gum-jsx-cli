@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { Command } from 'commander'
+import { version } from '../package.json'
 import { validate_inputs, output_options, run } from './args'
 import { layout, render } from './render'
 import { layout_deck, render_deck } from './deck'
@@ -15,6 +16,7 @@ type CliOptions = RenderOptions & { plugin: string[] }
 
 const program0 = new Command()
   .name('gum')
+  .version(version)
   .description('Render JSX files or stdin, or a deck directory as PDF. Unsized figures receive a 640 × 480 offer; source sizes and natural content sizes are retained.')
   .allowExcessArguments(false)
   .argument('[files...]', 'JSX files or one deck directory (omit or use - for stdin)', ['-'])

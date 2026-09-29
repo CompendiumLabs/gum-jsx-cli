@@ -2,6 +2,7 @@
 
 import { readFileSync } from 'node:fs'
 import { Command, InvalidArgumentError } from 'commander'
+import { version } from '../package.json'
 import { px, em } from '@gum-jsx/core'
 import { mathToElement } from '@gum-jsx/math'
 import { output_options, number_option, infer_format, run } from './args'
@@ -31,6 +32,7 @@ function macro_option(value: string, previous: Record<string, string>): Record<s
 
 const program0 = new Command()
   .name('gum-tex')
+  .version(version)
   .description('Render a TeX formula. Natural exports include the formula’s logical box and visible ink.')
   .argument('[tex]', 'Literal TeX (omit or use - for stdin)')
 

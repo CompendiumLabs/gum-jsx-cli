@@ -9,6 +9,7 @@ import { mathToSvg } from '@gum-jsx/math'
 import { render_pdf } from '@gum-jsx/pdf'
 import { render_png } from '@gum-jsx/png'
 import { decode } from 'fast-png'
+import { version } from '../package.json'
 
 const texDefaults = { font_size: px(64) } as const
 const exportSvg = mathToSvg
@@ -31,6 +32,19 @@ function png_size(bytes: Uint8Array) {
   const view = new DataView(bytes.buffer, bytes.byteOffset)
   return { width: view.getUint32(16), height: view.getUint32(20) }
 }
+
+test('all commands print the package version and exit without rendering', async () => {
+  for (const entry of ['cli', 'tex', 'mark']) {
+    for (const flag of ['--version', '-V']) {
+      const result = await cli([flag], 'throw new Error("Unexpected evaluation")', entry)
+      expect(result.code).toBe(0)
+      expect(result.text).toBe(`${version}\n`)
+      expect(result.error).toBe('')
+    }
+    const help = await cli(['--help'], '', entry)
+    expect(help.text).toContain('-V, --version')
+  }
+})
 
 test('gum renders named map coordinates and position spreads with the same geometry as tuples', async () => {
   const source = `
