@@ -38,7 +38,7 @@ bun install -g @gum-jsx/cli@beta
 This installs three commands: `gum` for JSX figures, `gum-tex` for standalone
 TeX, and `gum-mark` for Markdown with inline figures. To work from a
 [source checkout](https://github.com/CompendiumLabs/gum-jsx#development), run
-`bun install` and `bun --filter @gum-jsx/png run build` at the workspace root,
+`bun install` and `bun --filter @gum-jsx/png build` at the workspace root,
 then use `bun run gum` (or the corresponding `gum-tex` and `gum-mark` scripts).
 Rebuild `@gum-jsx/png` after changing its source; this uses the checked-in WASM
 artifact and requires no Rust toolchain.
