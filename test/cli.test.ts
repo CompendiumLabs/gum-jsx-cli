@@ -7,7 +7,8 @@ import { px, em, THEMES } from '@gum-jsx/core'
 import type { Fragment } from '@gum-jsx/core'
 import { mathToSvg } from '@gum-jsx/math'
 import { render_pdf } from '@gum-jsx/pdf'
-import { rasterize_svg } from '@gum-jsx/png'
+import { render_png } from '@gum-jsx/png/fragment'
+import { decode } from 'fast-png'
 
 const texDefaults = { font_size: px(64) } as const
 const exportSvg = mathToSvg
@@ -16,8 +17,9 @@ function drawings(fragment: Fragment): Fragment['draw'][number][] {
 }
 const scratch = mkdtempSync(join(tmpdir(), 'gum-jsx-cli-'))
 afterAll(() => rmSync(scratch, { recursive: true, force: true }))
-async function cli(args: string[], input = '', entry = 'tex') {
-  const child = Bun.spawn([process.execPath, fileURLToPath(new URL(`../src/${entry}.ts`, import.meta.url)), ...args], {
+async function cli(args: string[], input = '', entry = 'tex', addons = false) {
+  const child = Bun.spawn([process.execPath, ...addons ? [] : ['--no-addons'],
+    fileURLToPath(new URL(`../src/${entry}.ts`, import.meta.url)), ...args], {
     stdin: new Blob([input]), stdout: 'pipe', stderr: 'pipe', cwd: scratch,
   })
   const [code, bytes, error] = await Promise.all([child.exited,
@@ -71,10 +73,10 @@ test('PNG encoding presets reach file and terminal output in both CLIs', async (
     const args = entry === 'tex' ? ['x^2'] : []
     const source = entry === 'cli' ? '<Text font-size={px(36)}>PNG encoding</Text>' : ''
     const options = [...args, '--theme', 'light', '-W', '150', '-H', '50']
-    const svg = await cli([...options, '-f', 'svg'], source, entry)
-    expect(svg.code).toBe(0)
+    const json = await cli([...options, '-f', 'json'], source, entry)
+    expect(json.code).toBe(0)
     for (const encoding of ['fast', 'standard'] as const) {
-      const expected = rasterize_svg(svg.text, { size: { width: 150, height: 50 }, encoding })
+      const expected = render_png(JSON.parse(json.text), { encoding })
       const png = await cli([...options, '-f', 'png', '--png-encoding', encoding], source, entry)
       expect(png.code, png.error).toBe(0)
       expect(png.bytes).toEqual(new Uint8Array(expected))
@@ -94,7 +96,41 @@ test('PNG encoding presets reach file and terminal output in both CLIs', async (
   }
 })
 
-test('text mode defaults to paths and supports live prose while keeping math and PDF outlined', async () => {
+test('direct PNG output preserves crop pixels, backgrounds, and full geometry without native addons', async () => {
+  const source = '<Rect width="4px" height="4px" fill="red" stroke={none} />'
+  const args = ['-f', 'png', '--select', '-1,-1,6,6', '--ratio', '2']
+  for (const background of [undefined, 'blue']) {
+    const result = await cli([...args, ...background ? ['--background', background] : []], source, 'cli')
+    expect(result.code, result.error).toBe(0)
+    const image = decode(result.bytes)
+    expect([image.width, image.height]).toEqual([12, 12])
+    expect([...image.data.slice(0, 4)]).toEqual(background ? [0, 0, 255, 255] : [0, 0, 0, 0])
+    expect([...image.data.slice((3 * 12 + 3) * 4, (3 * 12 + 3) * 4 + 4)]).toEqual([255, 0, 0, 255])
+  }
+  const fraction = '<Rect width="1.25px" height="2.25px" fill="red" stroke={none} />'
+  const rounded = await cli(['-f', 'png', '--precision', '0', '--ratio', '2'], fraction, 'cli')
+  const full = await cli(['-f', 'png', '--precision', 'full', '--ratio', '2'], fraction, 'cli')
+  expect(rounded.code, rounded.error).toBe(0)
+  expect(rounded.bytes).toEqual(full.bytes)
+  expect(png_size(rounded.bytes)).toEqual({ width: 3, height: 5 })
+})
+
+test('live text and nested emoji use optional canvas and explain when it is unavailable', async () => {
+  for (const [source, args] of [
+    ['<Text>Live prose</Text>', ['--text-mode', 'live']],
+    ['<Frame padding="4px"><Text>Hello 😀</Text></Frame>', []],
+  ] as const) {
+    const missing = await cli(['-f', 'png', ...args], source, 'cli')
+    expect(missing.code).toBe(1)
+    expect(missing.text).toBe('')
+    expect(missing.error).toContain('optional canvas')
+    const native = await cli(['-f', 'png', ...args], source, 'cli', true)
+    expect(native.code, native.error).toBe(0)
+    expect(png_size(native.bytes).width).toBeGreaterThan(0)
+  }
+})
+
+test('text mode defaults to paths and supports live prose and math while keeping PDF outlined', async () => {
   const source = '<Text>Live <Span font-weight="bold">prose</Span> <Latex>x^2</Latex></Text>'
   const args = ['-f', 'svg', '-W', '320', '-H', '100']
   const standard = await cli(args, source, 'cli')
@@ -106,17 +142,21 @@ test('text mode defaults to paths and supports live prose while keeping math and
   expect(live.text).toContain('<text ')
   expect(live.text).toContain('font-weight="700"')
   expect(live.text).toContain('>prose</text>')
-  expect(live.text).toContain('<path ')
-  const png = await cli(['-f', 'png', '--text-mode', 'live', '-W', '320', '-H', '100'], source, 'cli')
+  expect(live.text).toContain('font-family="KaTeX_Math"')
+  expect(live.text).not.toContain('<path ')
+  const png = await cli(['-f', 'png', '--text-mode', 'live', '-W', '320', '-H', '100'], source, 'cli', true)
   expect(png.code, png.error).toBe(0)
   expect(png_size(png.bytes)).toEqual({ width: 320, height: 100 })
   const pdf = await cli(['-f', 'pdf', '--text-mode', 'live'], source, 'cli')
   expect(pdf.code, pdf.error).toBe(0)
   expect(pdf.text).toStartWith('%PDF-')
+  const outlinedPdf = await cli(['-f', 'pdf', '--text-mode', 'path'], source, 'cli')
+  expect(outlinedPdf.code, outlinedPdf.error).toBe(0)
+  expect(pdf.bytes).toEqual(outlinedPdf.bytes)
   const math = await cli([String.raw`x+\text{words}`, '-f', 'svg', '--text-mode', 'live'])
   expect(math.code, math.error).toBe(0)
-  expect(math.text).not.toContain('<text ')
-  expect(math.text).toContain('<path ')
+  expect(math.text).toContain('<text ')
+  expect(math.text).not.toContain('<path ')
   for (const entry of ['cli', 'tex']) {
     const invalid = await cli(['--text-mode', 'invalid'], '', entry)
     expect(invalid.code).toBe(1)

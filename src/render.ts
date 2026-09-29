@@ -2,7 +2,7 @@ import { writeFileSync } from 'node:fs'
 import { available, exact, make_request, layout_element, render_svg, inspect_fragment,
   DEFAULT_OUTPUT_PRECISION } from '@gum-jsx/core'
 import { createMathFonts } from '@gum-jsx/math'
-import { rasterize_svg } from '@gum-jsx/png'
+import { render_png, has_live_text, rasterize_svg } from '@gum-jsx/png'
 import { render_pdf } from '@gum-jsx/pdf'
 import { format_image } from './kitty'
 
@@ -57,16 +57,22 @@ function render(result: LayoutElementResult, format: string, values: RenderOptio
       background: values.background, title: values.title, precision: values.precision,
     })
   }
+  else if (format === 'png' || format === 'kitty') {
+    const { fragment } = result
+    const options = { ratio: values.ratio, select: values.select, encoding: values.pngEncoding }
+    // Live text and emoji still need host fonts from the optional SVG backend.
+    const png = has_live_text(fragment)
+      ? rasterize_svg(render_svg(fragment, { precision: values.precision }),
+        { ...options, size: fragment.size, background: values.background })
+      : render_png(fragment, { ...options, background: values.background })
+    output = format === 'kitty' ? format_image(Buffer.from(png)) + '\n' : png
+  }
   else {
     output = render_svg(result.fragment, {
       background: values.background, title: values.title, id_prefix: values.idPrefix,
       precision: values.precision,
     })
-    if (format === 'png' || format === 'kitty') {
-      const png = rasterize_svg(output, { size: result.fragment.size, ratio: values.ratio,
-        select: values.select, encoding: values.pngEncoding })
-      output = format === 'kitty' ? format_image(png) + '\n' : png
-    } else output += '\n'
+    output += '\n'
   }
   if (values.output) writeFileSync(values.output, output)
   else process.stdout.write(output)
