@@ -17,8 +17,8 @@ function drawings(fragment: Fragment): Fragment['draw'][number][] {
 }
 const scratch = mkdtempSync(join(tmpdir(), 'gum-jsx-cli-'))
 afterAll(() => rmSync(scratch, { recursive: true, force: true }))
-async function cli(args: string[], input = '', entry = 'tex', addons = false) {
-  const child = Bun.spawn([process.execPath, ...addons ? [] : ['--no-addons'],
+async function cli(args: string[], input = '', entry = 'tex') {
+  const child = Bun.spawn([process.execPath, '--no-addons',
     fileURLToPath(new URL(`../src/${entry}.ts`, import.meta.url)), ...args], {
     stdin: new Blob([input]), stdout: 'pipe', stderr: 'pipe', cwd: scratch,
   })
@@ -115,19 +115,24 @@ test('direct PNG output preserves crop pixels, backgrounds, and full geometry wi
   expect(png_size(rounded.bytes)).toEqual({ width: 3, height: 5 })
 })
 
-test('live text and nested emoji use optional canvas and explain when it is unavailable', async () => {
-  for (const [source, args] of [
-    ['<Text>Live prose</Text>', ['--text-mode', 'live']],
-    ['<Frame padding="4px"><Text>Hello 😀</Text></Frame>', []],
-  ] as const) {
-    const missing = await cli(['-f', 'png', ...args], source, 'cli')
-    expect(missing.code).toBe(1)
-    expect(missing.text).toBe('')
-    expect(missing.error).toContain('optional canvas')
-    const native = await cli(['-f', 'png', ...args], source, 'cli', true)
-    expect(native.code, native.error).toBe(0)
-    expect(png_size(native.bytes).width).toBeGreaterThan(0)
+test('PNG and kitty outline text regardless of SVG text mode; emoji report an error', async () => {
+  for (const entry of ['cli', 'tex']) {
+    const source = entry === 'cli' ? '<Text>Text <Latex>x^2</Latex></Text>' : ''
+    const args = entry === 'tex' ? ['x^2'] : []
+    for (const format of ['png', 'kitty']) {
+      const path = await cli([...args, '-f', format, '--text-mode', 'path'], source, entry)
+      const live = await cli([...args, '-f', format, '--text-mode', 'live'], source, entry)
+      expect(live.code, live.error).toBe(0)
+      expect(live.bytes).toEqual(path.bytes)
+    }
   }
+  const output = join(scratch, 'emoji.png')
+  await Bun.write(output, 'keep me')
+  const result = await cli(['-o', output], '<Frame padding="4px"><Text>Hello 😀</Text></Frame>', 'cli')
+  expect(result.code).toBe(1)
+  expect(result.text).toBe('')
+  expect(result.error).toContain('cannot draw live text')
+  expect(await Bun.file(output).text()).toBe('keep me')
 })
 
 test('text mode defaults to paths and supports live prose and math while keeping PDF outlined', async () => {
@@ -144,7 +149,7 @@ test('text mode defaults to paths and supports live prose and math while keeping
   expect(live.text).toContain('>prose</text>')
   expect(live.text).toContain('font-family="KaTeX_Math"')
   expect(live.text).not.toContain('<path ')
-  const png = await cli(['-f', 'png', '--text-mode', 'live', '-W', '320', '-H', '100'], source, 'cli', true)
+  const png = await cli(['-f', 'png', '--text-mode', 'live', '-W', '320', '-H', '100'], source, 'cli')
   expect(png.code, png.error).toBe(0)
   expect(png_size(png.bytes)).toEqual({ width: 320, height: 100 })
   const pdf = await cli(['-f', 'pdf', '--text-mode', 'live'], source, 'cli')

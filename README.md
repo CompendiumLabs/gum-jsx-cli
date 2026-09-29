@@ -130,7 +130,7 @@ Run `gum [options] [files...]`:
 | `--title <text>` | Set the SVG or PDF document title. |
 | `--id-prefix <name>` | Prefix SVG definition IDs, default `gum`. |
 | `--precision <digits\|full>` | Output decimal places from 0 to 100, or `full`; default `10`. |
-| `--text-mode <path\|live>` | Text and math as glyph paths (default) or live SVG text. PDF retains paths. |
+| `--text-mode <path\|live>` | SVG text and math as glyph paths (default) or live text. PNG, kitty, and PDF always use paths. |
 | `--stats` | Print layout counters to stderr. |
 | `-h, --help` | Show command help. |
 
@@ -174,17 +174,11 @@ in JSX still apply and paint over the render backdrop. See
 PNG and kitty render fragments through `@gum-jsx/png` and tiny-skia WebAssembly.
 Outlined text, math, shapes, and embedded PNGs need no native addons or install
 scripts. `gum-mark` uses the same backend for Gum figures and math.
-With `--text-mode live`, text and math stay live, preserving Gum's line
-breaks and positions. The SVG viewer or PNG/kitty rasterizer must have matching
-fonts available; the flag does not embed or install fonts. Live output can have
-different glyph rendering in different hosts. Emoji always remain live SVG text
-and depend on the rasterizer's available fonts. Both `gum` and `gum-tex` accept
-the option.
-
-Figures containing live text or emoji fall back to node-canvas. Install the
-optional `canvas` package and allow its native install script to use those
-features; the same dependency is needed for external SVG images in `gum-mark`.
-See the [PNG package's SVG setup](https://github.com/CompendiumLabs/gum-jsx-png#svg-rendering).
+`--text-mode live` preserves text and math as live SVG text. SVG viewers need
+matching fonts; the option does not embed or install them. PNG, kitty, and PDF
+always request glyph outlines regardless of that flag. Emoji without outlines
+cannot be rasterized; export SVG to display them in a browser with suitable fonts.
+External SVG images in `gum-mark` are unsupported; use PNG or JSX instead.
 `--background` also fills any area of a PNG crop outside the figure viewport.
 
 PDF uses `@gum-jsx/pdf`, loaded only for this format. It writes vector
@@ -196,9 +190,9 @@ unsupported paint expressions fail with an error. See the
 [PDF API documentation](https://github.com/CompendiumLabs/gum-jsx-pdf/blob/master/README.md) for format limits.
 
 `--precision` sets the decimal places used in SVG, PDF, and tree numeric output;
-direct PNG and kitty rendering use the full layout geometry. The live-text
-fallback uses the resulting SVG precision. Choose an integer from 0 to 100, or `full`
-for unrounded JavaScript number strings. It does not change layout geometry.
+PNG and kitty rendering use the full layout geometry. Choose an integer from
+0 to 100, or `full` for unrounded JavaScript number strings. It does not change
+layout geometry.
 
 Errors go to stderr and exit with status 1. `--stats` writes layout counters as
 JSON to stderr, one line per rendered page.

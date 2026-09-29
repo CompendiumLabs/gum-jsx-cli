@@ -162,7 +162,7 @@ function output_options(program: Command): Command {
     .option('--title <text>', 'Set the SVG or PDF document title')
     .option('--id-prefix <name>', 'Prefix SVG definition IDs', 'gum')
     .option('--precision <digits|full>', 'Output decimal places (0–100; default: 10)', precision_option)
-    .addOption(new Option('--text-mode <mode>', 'Text and math in SVG/PNG/kitty (live raster output needs canvas and host fonts; PDF keeps paths)')
+    .addOption(new Option('--text-mode <mode>', 'Text and math in SVG (PNG, kitty, and PDF always use paths)')
       .choices(['path', 'live']).default('path'))
     .option('--stats', 'Print layout counters to stderr')
 }
