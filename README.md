@@ -38,8 +38,10 @@ bun install -g @gum-jsx/cli@beta
 This installs three commands: `gum` for JSX figures, `gum-tex` for standalone
 TeX, and `gum-mark` for Markdown with inline figures. To work from a
 [source checkout](https://github.com/CompendiumLabs/gum-jsx#development), run
-`bun install` at the workspace root and use `bun run gum` (or the corresponding
-`gum-tex` and `gum-mark` scripts).
+`bun install` and `bun --filter @gum-jsx/png run build` at the workspace root,
+then use `bun run gum` (or the corresponding `gum-tex` and `gum-mark` scripts).
+Rebuild `@gum-jsx/png` after changing its source; this uses the checked-in WASM
+artifact and requires no Rust toolchain.
 
 ## Make your first figure
 
@@ -331,7 +333,7 @@ printf 'Inline math: $x^2$\n' | gum-mark
 ```
 
 `gum-mark` renders headings and inline Markdown as ANSI text. Fenced `gum` or
-`gum.jsx` blocks, local `.jsx`, `.svg`, and `.png` images, and `$...$` or
+`gum.jsx` blocks, local `.jsx` and `.png` images, and `$...$` or
 `$$...$$` math become kitty graphics. Fence metadata and image alt text accept
 `width=`, `height=`, and `theme=` overrides. `--pager` sends virtual image
 placements to the terminal and passes their Unicode placeholder grids through

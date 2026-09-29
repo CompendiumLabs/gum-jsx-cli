@@ -7,7 +7,7 @@ import { px, em, THEMES } from '@gum-jsx/core'
 import type { Fragment } from '@gum-jsx/core'
 import { mathToSvg } from '@gum-jsx/math'
 import { render_pdf } from '@gum-jsx/pdf'
-import { render_png } from '@gum-jsx/png/fragment'
+import { render_png } from '@gum-jsx/png'
 import { decode } from 'fast-png'
 
 const texDefaults = { font_size: px(64) } as const
