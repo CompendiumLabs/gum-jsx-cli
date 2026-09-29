@@ -4,12 +4,13 @@ import { pack_standalone } from './standalone-pack'
 
 const defaults = [
   { target: 'bun-darwin-arm64', outfile: 'dist/gum-macos-arm64' },
+  { target: 'bun-darwin-x64', outfile: 'dist/gum-macos-x64' },
   { target: 'bun-windows-x64', outfile: 'dist/gum-windows-x64.exe' },
   { target: 'bun-linux-x64', outfile: 'dist/gum-linux-x64' },
 ]
 
 const program = new Command()
-  .description('Build standalone gum executables. Defaults to macOS ARM64, Windows x64, and Linux x64.')
+  .description('Build standalone gum executables. Defaults to macOS ARM64 and x64, Windows x64, and Linux x64.')
   .option('--target <target>', 'Build one Bun target, or "native" for the installed runtime')
   .option('--outfile <path>', 'Override the output path (requires --target)')
   .option('--archive', 'Package builds in dist/releases/v<version> with SHA256SUMS')

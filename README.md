@@ -46,13 +46,13 @@ artifact and requires no Rust toolchain.
 ### Standalone executable
 
 From this package's directory, build `gum` with Bun 1.4.2 or newer. With no
-options, the script builds macOS ARM64, Windows x64, and Linux x64:
+options, the script builds macOS ARM64 and x64, Windows x64, and Linux x64:
 
 ```sh
 bun run build:standalone
 ```
 
-The outputs are `dist/gum-macos-arm64`, `dist/gum-windows-x64.exe`, and
+The outputs are `dist/gum-macos-arm64`, `dist/gum-macos-x64`, `dist/gum-windows-x64.exe`, and
 `dist/gum-linux-x64`. Select one target with `--target`; optionally override its
 output path with `--outfile`:
 
@@ -93,7 +93,7 @@ and run as part of `bun run test`;
 
 ### Release archives
 
-Build and package the three default targets for manual upload to GitHub Releases:
+Build and package the four default targets for manual upload to GitHub Releases:
 
 ```sh
 bun run pack:standalone
@@ -103,6 +103,7 @@ This writes these files to `dist/releases/v<package-version>/`:
 
 ```text
 gum-v<version>-macos-arm64.tar.gz
+gum-v<version>-macos-x64.tar.gz
 gum-v<version>-linux-x64.tar.gz
 gum-v<version>-windows-x64.zip
 SHA256SUMS
