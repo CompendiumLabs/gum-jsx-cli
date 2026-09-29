@@ -20,19 +20,19 @@
   },
   "dependencies": {
     "commander": "^14.0.3",
-    "@gum-jsx/core": "2.0.0-beta.2",
-    "@gum-jsx/math": "2.0.0-beta.2",
-    "@gum-jsx/maps": "2.0.0-beta.2",
-    "@gum-jsx/mark": "2.0.0-beta.2",
-    "@gum-jsx/pdf": "2.0.0-beta.2",
-    "@gum-jsx/png": "2.0.0-beta.2"
+    "@gum-jsx/core": "2.0.0-beta.3",
+    "@gum-jsx/math": "2.0.0-beta.3",
+    "@gum-jsx/maps": "2.0.0-beta.3",
+    "@gum-jsx/mark": "2.0.0-beta.3",
+    "@gum-jsx/pdf": "2.0.0-beta.3",
+    "@gum-jsx/png": "2.0.0-beta.3"
   },
   "devDependencies": {
     "fast-png": "^8.0.0",
     "@types/bun": "latest",
     "typescript": "^7"
   },
-  "version": "2.0.0-beta.2",
+  "version": "2.0.0-beta.3",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/CompendiumLabs/gum-jsx-cli.git"
