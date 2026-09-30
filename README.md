@@ -63,7 +63,7 @@ From this package's directory, build `gum` with Bun 1.4.2 or newer. With no
 options, the script builds macOS ARM64 and x64, Windows x64, and Linux x64:
 
 ```sh
-bun run build:standalone
+bun run standalone:build
 ```
 
 The outputs are `dist/gum-macos-arm64`, `dist/gum-macos-x64`, `dist/gum-windows-x64.exe`, and
@@ -71,8 +71,8 @@ The outputs are `dist/gum-macos-arm64`, `dist/gum-macos-x64`, `dist/gum-windows-
 output path with `--outfile`:
 
 ```sh
-bun run build:standalone --target bun-linux-x64
-bun run build:standalone --target=bun-darwin-arm64 --outfile dist/gum-macos
+bun run standalone:build --target bun-linux-x64
+bun run standalone:build --target=bun-darwin-arm64 --outfile dist/gum-macos
 ```
 
 The executable includes the Bun runtime, core and math fonts, map data, and the
@@ -82,7 +82,7 @@ rendering. This build produces only `gum`.
 For a local build using the installed Bun runtime, or to test a release executable:
 
 ```sh
-bun run build:standalone --target native
+bun run standalone:build --target native
 ./dist/gum figure.jsx -o figure.png
 GUM_STANDALONE_BINARY="$PWD/dist/gum-linux-x64" bun test ./test/standalone.test.ts
 ```
@@ -109,7 +109,7 @@ and run as part of `bun run test`;
 Build and package the four default targets for manual upload to GitHub Releases:
 
 ```sh
-bun run pack:standalone
+bun run standalone:pack
 ```
 
 This writes these files to `dist/releases/v<package-version>/`:
@@ -130,7 +130,7 @@ notices. Unix archives preserve the executable permission. Packaging requires
 The same target and output options apply. For example:
 
 ```sh
-bun run pack:standalone --target bun-linux-x64
+bun run standalone:pack --target bun-linux-x64
 ```
 
 This rebuilds and packages just that target, retaining the other archives in the

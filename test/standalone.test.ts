@@ -13,7 +13,7 @@ beforeAll(async () => {
     copyFileSync(process.env.GUM_STANDALONE_BINARY, binary)
     return
   }
-  const build = Bun.spawn([process.execPath, 'run', 'build:standalone', '--target', 'native', '--outfile', binary], {
+  const build = Bun.spawn([process.execPath, 'run', 'standalone:build', '--target', 'native', '--outfile', binary], {
     cwd: root, stdout: 'pipe', stderr: 'pipe',
   })
   const [code, output, error] = await Promise.all([
