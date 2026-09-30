@@ -35,13 +35,12 @@ npm install -g @gum-jsx/cli@beta
 ```
 
 The npm package contains a prebuilt JavaScript bundle, fonts, map data, and the
-PNG renderer. It has no runtime package dependencies. Plugins require Bun
-1.4.2 or newer; built-in rendering works under Node without Bun.
+PNG renderer. It has no runtime package dependencies and runs under Node without Bun.
 
 This installs `gum` for JSX figures. To work from a
 [source checkout](https://github.com/CompendiumLabs/gum-jsx#development), run
 `bun install` and `bun --filter @gum-jsx/png build` at the workspace root,
-then use `bun run gum`.
+then use `bun gum-jsx-cli/src/cli.ts`.
 Rebuild `@gum-jsx/png` after changing its source; this uses the checked-in WASM
 artifact and requires no Rust toolchain.
 
@@ -55,11 +54,8 @@ Acorn deduplication used by standalone executables.
 
 Run `bun test test/package.test.ts` to pack the CLI, install it offline in a
 fresh project with lifecycle scripts disabled, and run command tests under Node
-and Bun plus plugin tests under Bun. Node rendering is tested with an empty
-`PATH`. Set `GUM_NODE_RUNTIME` to test a specific Node executable. External plugins resolve from the caller's project. Imports of `@gum-jsx/core`,
-`@gum-jsx/math`, `@gum-jsx/maps`, `@gum-jsx/png`, and `@gum-jsx/pdf` share the
-CLI's bundled libraries, so their element classes remain compatible. Plugins
-must install their other dependencies.
+and Bun. Node rendering is tested with an empty `PATH`. Set `GUM_NODE_RUNTIME`
+to test a specific Node executable.
 
 ### Standalone executable
 
@@ -81,8 +77,7 @@ bun run build:standalone --target=bun-darwin-arm64 --outfile dist/gum-macos
 
 The executable includes the Bun runtime, core and math fonts, map data, and the
 PNG WebAssembly renderer. Users need no Bun installation or `node_modules` for
-built-in functionality. External `--plugin` modules and their dependencies still
-come from the user's project. This build produces only `gum`.
+rendering. This build produces only `gum`.
 
 For a local build using the installed Bun runtime, or to test a release executable:
 
@@ -105,7 +100,7 @@ with Bun 1.4.2. Other platforms still need native testing before release.
 The build minifies whitespace and syntax while preserving identifier names used
 in inspection output and diagnostics. Standalone tests copy the executable to a
 temporary directory, clear `PATH`, and compare all output formats with the source
-CLI, including fonts, maps, decks, and plugins. They build only the native target
+CLI, including fonts, maps, and decks. They build only the native target
 and run as part of `bun run test`;
 `GUM_STANDALONE_BINARY` can select an already-built executable instead.
 
@@ -218,7 +213,6 @@ Run `gum [options] [files...]`:
 | Option | Meaning |
 |---|---|
 | `files...` | JSX files or one deck directory; omit or use `-` for stdin. |
-| `--plugin <module>` | Load extra named bindings from a package or local module; repeat to load more. Requires Bun. |
 | `-f, --format <format>` | Output format: `kitty`, `svg`, `png`, `pdf`, `tree`, or `json`. Defaults to kitty or the output extension for a file; directories and multiple files require PDF. |
 | `-o, --output <file>` | Write to a file instead of stdout. |
 | `-W, --width <pixels>` | Set the viewport width. |
@@ -299,47 +293,6 @@ JSON to stderr, one line per rendered page.
 Run `bun run typecheck` here to check the CLI, or from the workspace root to
 check all packages. Run `bun run test` here for command integration tests, also included in the
 workspace test command.
-
-## Plugins
-
-Core bindings are always available, and math and maps are bundled by default.
-Map elements and helpers such as `GeoMap`, `world_countries()`, and `us_states()`
-are available without a `--plugin` flag.
-Plugins require Bun, including when using the npm package. Node rejects
-`--plugin` with instructions to run the CLI under Bun. For a local npm install:
-
-```sh
-bun ./node_modules/@gum-jsx/cli/dist/npm/cli.js figure.jsx --plugin ./elements.ts -o figure.svg
-```
-
-The standalone executable includes Bun and supports plugins directly. Use
-`--plugin` to add elements, helpers, or data from installed packages or local
-JavaScript/TypeScript modules:
-
-```sh
-gum figure.jsx --plugin ./elements.ts -o figure.svg
-gum slides/ --plugin ./elements.ts -o talk.pdf
-gum figure.jsx --plugin ./elements.ts --plugin ./colors.ts -o figure.svg
-```
-
-Plugin names and paths resolve from the current working directory, including
-when the CLI is installed globally or the input is in another directory.
-Plugin packages must already be installed in that project. The bundled CLI
-provides the five Gum libraries listed above to plugins. Use `./` for relative module
-paths, or pass an absolute path.
-
-A plugin exports the names to make available in Gum source. For example,
-`elements.ts` could contain:
-
-```ts
-export { Rect as Tile } from '@gum-jsx/core'
-export const accent = 'tomato'
-```
-
-Source can then use `<Tile fill={accent} />`. Named exports are merged after math
-and maps in command-line order, so later plugins override earlier bindings. Default
-exports are ignored. Plugins load before evaluation, and the same bindings are
-available to a file, stdin, or every prelude and slide in a deck.
 
 ## Multipage PDFs and decks
 
