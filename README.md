@@ -31,7 +31,7 @@ Gum output; their sources are [logo.jsx](images/logo.jsx) and [nexus.jsx](images
 The bundled npm CLI requires Node.js 24 or newer. Install it with:
 
 ```sh
-npm install -g @gum-jsx/cli@beta
+npm install -g @gum-jsx/cli
 ```
 
 The npm package contains a prebuilt JavaScript bundle, fonts, map data, and the
