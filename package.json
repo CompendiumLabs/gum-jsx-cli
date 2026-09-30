@@ -7,8 +7,8 @@
     "gum": "dist/npm/cli.js"
   },
   "scripts": {
-    "build:standalone": "bun scripts/standalone.ts",
-    "pack:standalone": "bun scripts/standalone.ts --archive",
+    "standalone:build": "bun scripts/standalone.ts",
+    "standalone:pack": "bun scripts/standalone.ts --archive",
     "gum": "bun src/cli.ts",
     "typecheck": "tsc --noEmit",
     "test": "bun test ./test",
@@ -23,13 +23,13 @@
     "@types/bun": "latest",
     "typescript": "^7",
     "commander": "^14.0.3",
-    "@gum-jsx/core": "2.0.0-beta.3",
-    "@gum-jsx/math": "2.0.0-beta.3",
-    "@gum-jsx/maps": "2.0.0-beta.3",
-    "@gum-jsx/pdf": "2.0.0-beta.3",
-    "@gum-jsx/png": "2.0.0-beta.3"
+    "@gum-jsx/core": "2.0.0-beta.4",
+    "@gum-jsx/math": "2.0.0-beta.4",
+    "@gum-jsx/maps": "2.0.0-beta.4",
+    "@gum-jsx/pdf": "2.0.0-beta.4",
+    "@gum-jsx/png": "2.0.0-beta.4"
   },
-  "version": "2.0.0-beta.3",
+  "version": "2.0.0-beta.4",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/CompendiumLabs/gum-jsx-cli.git"
