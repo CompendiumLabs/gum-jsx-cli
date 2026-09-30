@@ -1,12 +1,15 @@
 import { afterAll, expect, test } from 'bun:test'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const scratch = mkdtempSync(join(tmpdir(), 'gum-jsx-plugins-'))
-const entry = fileURLToPath(new URL('../src/cli.ts', import.meta.url))
-const core = pathToFileURL(Bun.resolveSync('@gum-jsx/core', import.meta.dir)).href
+const entry = process.env.GUM_CLI_ENTRY ?? fileURLToPath(new URL('../src/cli.ts', import.meta.url))
+const core = '@gum-jsx/core'
+mkdirSync(join(scratch, 'node_modules/@gum-jsx'), { recursive: true })
+symlinkSync(dirname(dirname(Bun.resolveSync('@gum-jsx/core', import.meta.dir))),
+  join(scratch, 'node_modules/@gum-jsx/core'), 'junction')
 afterAll(() => rmSync(scratch, { recursive: true, force: true }))
 
 async function cli(args: string[], input = '') {

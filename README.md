@@ -28,20 +28,38 @@ project. Output formats include SVG, PNG, PDF, and kitty graphics. Elements, mat
 functions, colors, and layout helpers are already in scope. The figures above are
 Gum output; their sources are [logo.jsx](images/logo.jsx) and [nexus.jsx](images/nexus.jsx).
 
-The current 2.0 prerelease has been tested with Bun 1.4.2 or newer on Linux x64,
-macOS, and Windows:
+The bundled npm CLI requires Node.js 24 or newer. Install it with:
 
 ```sh
-bun install -g @gum-jsx/cli@beta
+npm install -g @gum-jsx/cli@beta
 ```
 
-This installs three commands: `gum` for JSX figures, `gum-tex` for standalone
-TeX, and `gum-mark` for Markdown with inline figures. To work from a
+The npm package contains a prebuilt JavaScript bundle, fonts, map data, and the
+PNG renderer. It has no runtime package dependencies. Plugins require Bun
+1.4.2 or newer; built-in rendering works under Node without Bun.
+
+This installs `gum` for JSX figures. To work from a
 [source checkout](https://github.com/CompendiumLabs/gum-jsx#development), run
 `bun install` and `bun --filter @gum-jsx/png build` at the workspace root,
-then use `bun run gum` (or the corresponding `gum-tex` and `gum-mark` scripts).
+then use `bun run gum`.
 Rebuild `@gum-jsx/png` after changing its source; this uses the checked-in WASM
 artifact and requires no Rust toolchain.
+
+### Build the npm package
+
+From this package's directory, run `bun run build` to generate `dist/npm/`.
+`npm pack` and `npm publish` run this build automatically through `prepack`.
+The package ships only this bundle and its assets/notices, plus the README and
+license. Builds preserve class names used in layout diagnostics and share the
+Acorn deduplication used by standalone executables.
+
+Run `bun test test/package.test.ts` to pack the CLI, install it offline in a
+fresh project with lifecycle scripts disabled, and run command tests under Node
+and Bun plus plugin tests under Bun. Node rendering is tested with an empty
+`PATH`. Set `GUM_NODE_RUNTIME` to test a specific Node executable. External plugins resolve from the caller's project. Imports of `@gum-jsx/core`,
+`@gum-jsx/math`, `@gum-jsx/maps`, `@gum-jsx/png`, and `@gum-jsx/pdf` share the
+CLI's bundled libraries, so their element classes remain compatible. Plugins
+must install their other dependencies.
 
 ### Standalone executable
 
@@ -175,14 +193,11 @@ to build beyond this plot.
 
 PNG and kitty output use fast lossless encoding by default. Set
 `--png-encoding standard` to use the previous compression policy. Both presets
-preserve the same decoded pixels; encoded file sizes vary by image. The option
-is also available in `gum-tex`.
+preserve the same decoded pixels; encoded file sizes vary by image.
 
 ```sh
 gum diagram.jsx -f tree --stats            # Inspect measured layout
 gum slides/ -o talk.pdf                    # Turn a slide directory into a PDF
-gum-tex 'e^{i\pi}+1=0' -o euler.svg        # Render standalone math
-gum-mark README.md                         # Read Markdown with inline graphics
 printf '%s\n' '<Square width={px(40)} fill="tomato" />' | gum -f svg
 ```
 
@@ -190,12 +205,11 @@ printf '%s\n' '<Square width={px(40)} fill="tomato" />' | gum -f svg
 are relative to the directory where you run the command. An output extension
 selects SVG, PNG, or PDF. For a file or stdin, `gum` defaults to kitty graphics
 on stdout; directories and multiple files default to PDF. Use `-f svg` to send SVG text to
-stdout. The full options and the other two
-commands are below.
+stdout. The full options are below.
 
 The [Gum workspace](https://github.com/CompendiumLabs/gum-jsx#readme) also has a
 browser editor, TypeScript and React APIs, and separate packages for embedding
-the renderer. The CLI bundles the renderers you need for these commands.
+the renderer. The CLI bundles the renderers you need for this command.
 
 ## Usage
 
@@ -204,7 +218,7 @@ Run `gum [options] [files...]`:
 | Option | Meaning |
 |---|---|
 | `files...` | JSX files or one deck directory; omit or use `-` for stdin. |
-| `--plugin <module>` | Load extra named bindings from a package or local module; repeat to load more. |
+| `--plugin <module>` | Load extra named bindings from a package or local module; repeat to load more. Requires Bun. |
 | `-f, --format <format>` | Output format: `kitty`, `svg`, `png`, `pdf`, `tree`, or `json`. Defaults to kitty or the output extension for a file; directories and multiple files require PDF. |
 | `-o, --output <file>` | Write to a file instead of stdout. |
 | `-W, --width <pixels>` | Set the viewport width. |
@@ -227,7 +241,7 @@ so unsized canvases can render. This is an advisory budget: explicit source size
 still win, short content hugs, and tall documents can grow vertically.
 With either override, the other axis retains
 source sizing or hugs content, allowing `-W 320` to reflow a document and an
-aspect ratio to determine a figure's height. `gum-tex` retains natural sizing.
+aspect ratio to determine a figure's height.
 Zero is a valid viewport dimension for SVG, tree, and
 JSON; PNG, PDF, and kitty require positive dimensions. The sampling ratio must be
 positive and changes raster sampling without changing layout. Raster dimensions
@@ -236,7 +250,7 @@ round up to whole pixels.
 Use `--select 100,50,200,100 --ratio 3` to crop a 200-by-100-pixel region
 starting at `(100, 50)` and render it at 600 by 300 pixels. Coordinates are in
 the laid-out source viewport, measured from the top-left. Selection applies to
-PNG and kitty output in both commands; other formats report an error. Fractional
+PNG and kitty output; other formats report an error. Fractional
 coordinates and regions extending outside the image are supported.
 
 An explicit format takes precedence over the output filename. Otherwise the
@@ -259,12 +273,11 @@ in JSX still apply and paint over the render backdrop. See
 
 PNG and kitty render fragments through `@gum-jsx/png` and tiny-skia WebAssembly.
 Outlined text, math, shapes, and embedded PNGs need no native addons or install
-scripts. `gum-mark` uses the same backend for Gum figures and math.
+scripts.
 `--text-mode live` preserves text and math as live SVG text. SVG viewers need
 matching fonts; the option does not embed or install them. PNG, kitty, and PDF
 always request glyph outlines regardless of that flag. Emoji without outlines
 cannot be rasterized; export SVG to display them in a browser with suitable fonts.
-External SVG images in `gum-mark` are unsupported; use PNG or JSX instead.
 `--background` also fills any area of a PNG crop outside the figure viewport.
 
 PDF uses `@gum-jsx/pdf`, loaded only for this format. It writes vector
@@ -292,7 +305,15 @@ workspace test command.
 Core bindings are always available, and math and maps are bundled by default.
 Map elements and helpers such as `GeoMap`, `world_countries()`, and `us_states()`
 are available without a `--plugin` flag.
-Use `--plugin` to add elements, helpers, or data from installed packages or local
+Plugins require Bun, including when using the npm package. Node rejects
+`--plugin` with instructions to run the CLI under Bun. For a local npm install:
+
+```sh
+bun ./node_modules/@gum-jsx/cli/dist/npm/cli.js figure.jsx --plugin ./elements.ts -o figure.svg
+```
+
+The standalone executable includes Bun and supports plugins directly. Use
+`--plugin` to add elements, helpers, or data from installed packages or local
 JavaScript/TypeScript modules:
 
 ```sh
@@ -303,7 +324,8 @@ gum figure.jsx --plugin ./elements.ts --plugin ./colors.ts -o figure.svg
 
 Plugin names and paths resolve from the current working directory, including
 when the CLI is installed globally or the input is in another directory.
-Packages must already be installed in that project. Use `./` for relative module
+Plugin packages must already be installed in that project. The bundled CLI
+provides the five Gum libraries listed above to plugins. Use `./` for relative module
 paths, or pass an absolute path.
 
 A plugin exports the names to make available in Gum source. For example,
@@ -401,72 +423,7 @@ directory. The checked-in report notes are in
 
 The protocol encoders in [src/kitty.ts](./src/kitty.ts) accept PNG or raw RGBA
 data, with image/placement IDs, terminal columns/rows, cursor movement, and
-virtual-placement controls. `@gum-jsx/mark` adds virtual image placements and
-Unicode placeholder grids for pager output.
+virtual-placement controls.
 
 Watch mode remains
 tracked in [FEATURES.md](https://github.com/CompendiumLabs/gum-jsx/blob/master/docs/FEATURES.md#command-line-and-authoring-workflows).
-
-## Markdown terminal output
-
-```sh
-gum-mark README.md
-gum-mark notes.md -t light -H 120
-gum-mark notes.md -p
-printf 'Inline math: $x^2$\n' | gum-mark
-```
-
-`gum-mark` renders headings and inline Markdown as ANSI text. Fenced `gum` or
-`gum.jsx` blocks, local `.jsx` and `.png` images, and `$...$` or
-`$$...$$` math become kitty graphics. Fence metadata and image alt text accept
-`width=`, `height=`, and `theme=` overrides. `--pager` sends virtual image
-placements to the terminal and passes their Unicode placeholder grids through
-`less -R`.
-
-## Standalone TeX
-
-```sh
-gum-tex 'e^{i\pi}+1=0' -o /tmp/euler.svg
-gum-tex 'e^{i\pi}+1=0' -o /tmp/euler.pdf
-gum-tex '\frac{a+b}{c+d}' -s 48 -p 0.25 -o /tmp/fraction.png --ratio 2
-gum-tex -i formula.tex --inline -f tree --stats
-printf '%s\n' '\int_0^1 x^2\,dx=\frac13' | gum-tex -f svg
-gum-tex 'x^2' --fit -W 320
-gum-tex 'x^2' --theme dark
-gum-tex 'x^2' -t light --background white -o /tmp/formula.png
-gum-tex --help
-```
-
-The `gum-tex` positional argument is literal TeX. Omit it or use `-` for stdin; use `-i` / `--input` for a file.
-Literal input and `--input` are mutually exclusive. Supply formula contents
-without `$` or `$$` delimiters. Quote shell input with single quotes to preserve
-backslashes; use `--` before a formula starting with a dash.
-
-The shared output options above apply to both commands. TeX adds:
-
-| Option | Meaning |
-|---|---|
-| `-s, --font-size <pixels>` | Positive base em, default `64`. |
-| `-p, --padding <em>` | Nonnegative padding on each side, default `0`. |
-| `--inline` | Text style; the default is display style. |
-| `--no-strut` | Omit the minimum formula line box. |
-| `--color <color>` | Formula color, default theme foreground (white for dark, black for light). |
-| `--macro <command=tex>` | Repeatable definition, such as `'\RR=\mathbb{R}'`. |
-| `--fit` | Allow enlargement into `-W` and/or `-H`; the default only shrinks. |
-| `--no-fit` | Keep the original formula size and clip to the viewport. |
-
-Natural exports use `mathToElement` from `@gum-jsx/math`: logical space and all
-visible ink are included, with negative extents translated into the viewport.
-Empty axes have a one-pixel floor. This preserves italic overhang, accents,
-laps, and smashed ink without changing their typographic advance inside other
-layouts. `gum` and `gum-tex` share layout, inspection, SVG, PNG, PDF, and kitty output.
-
-Font size controls typography. `-W` / `-H` shrink the formula when necessary;
-`--fit` also allows enlargement and requires at least one dimension. `--no-fit`
-keeps the formula unscaled and clips it to the viewport.
-`--ratio` controls raster resolution independently. Errors retain the formula's
-layout path and TeX source range when available; malformed and unsupported TeX
-exit with status 1. No JavaScript evaluation is used for TeX input.
-
-See the [standalone export guide](https://github.com/CompendiumLabs/gum-jsx-docs/blob/master/docs/guides/text/math_export.md) for
-synchronous/asynchronous library helpers and font-resource ownership.

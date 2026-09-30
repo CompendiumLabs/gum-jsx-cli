@@ -22,7 +22,7 @@ const program0 = new Command()
   .argument('[files...]', 'JSX files or one deck directory (omit or use - for stdin)', ['-'])
 
 const program = output_options(program0)
-  .option('--plugin <module>', 'Load extra element/helper bindings from a package or file (repeatable)',
+  .option('--plugin <module>', 'Load extra element/helper bindings from a package or file (repeatable; requires Bun)',
     (plugin: string, plugins: string[]) => [...plugins, plugin], [])
   .action(async (files: string[], values: CliOptions) => {
     const inputs = validate_inputs(files, values)

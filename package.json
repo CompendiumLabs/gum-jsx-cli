@@ -4,35 +4,30 @@
   "type": "module",
   "license": "MIT",
   "bin": {
-    "gum": "src/cli.ts",
-    "gum-tex": "src/tex.ts",
-    "gum-mark": "src/mark.ts"
+    "gum": "dist/npm/cli.js"
   },
   "scripts": {
     "build:standalone": "bun scripts/standalone.ts",
     "pack:standalone": "bun scripts/standalone.ts --archive",
     "gum": "bun src/cli.ts",
-    "gum-mark": "bun src/mark.ts",
     "typecheck": "tsc --noEmit",
-    "gum-tex": "bun src/tex.ts",
     "test": "bun test ./test",
     "visual-test": "bun test/visual.ts",
     "visual-report": "bun test/visual.ts",
-    "visual-report:serve": "bun visual-report/serve.ts"
-  },
-  "dependencies": {
-    "commander": "^14.0.3",
-    "@gum-jsx/core": "2.0.0-beta.3",
-    "@gum-jsx/math": "2.0.0-beta.3",
-    "@gum-jsx/maps": "2.0.0-beta.3",
-    "@gum-jsx/mark": "2.0.0-beta.3",
-    "@gum-jsx/pdf": "2.0.0-beta.3",
-    "@gum-jsx/png": "2.0.0-beta.3"
+    "visual-report:serve": "bun visual-report/serve.ts",
+    "build": "bun scripts/build.ts",
+    "prepack": "bun run build"
   },
   "devDependencies": {
     "fast-png": "^8.0.0",
     "@types/bun": "latest",
-    "typescript": "^7"
+    "typescript": "^7",
+    "commander": "^14.0.3",
+    "@gum-jsx/core": "2.0.0-beta.3",
+    "@gum-jsx/math": "2.0.0-beta.3",
+    "@gum-jsx/maps": "2.0.0-beta.3",
+    "@gum-jsx/pdf": "2.0.0-beta.3",
+    "@gum-jsx/png": "2.0.0-beta.3"
   },
   "version": "2.0.0-beta.3",
   "repository": {
@@ -48,10 +43,11 @@
     "tag": "beta"
   },
   "engines": {
+    "node": ">=24",
     "bun": ">=1.4.2"
   },
   "files": [
-    "src",
+    "dist/npm",
     "README.md",
     "LICENSE"
   ]

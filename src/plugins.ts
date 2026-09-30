@@ -4,6 +4,10 @@ import * as maps from '@gum-jsx/maps'
 
 // Math and maps are bundled with the CLI; additional plugins come from the caller's project.
 async function create_evaluator(plugins: readonly string[] = []): Promise<Evaluator> {
+  if (plugins.length && typeof Bun === 'undefined') {
+    throw new Error('CLI plugins require Bun. Run this CLI with Bun: bun '
+      + JSON.stringify(process.argv[1]) + ' <files...> --plugin <module>')
+  }
   let scope: Record<string, unknown> = { ...math, ...maps }
   for (const plugin of plugins) {
     try {

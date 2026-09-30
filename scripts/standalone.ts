@@ -1,5 +1,6 @@
 import { Command } from 'commander'
-import { fileURLToPath } from 'node:url'
+import { resolve } from 'node:path'
+import { bundle_options, root } from './bundle'
 import { pack_standalone } from './standalone-pack'
 
 const defaults = [
@@ -34,16 +35,14 @@ for (const { target, outfile } of builds) {
   // Bun 1.4.2 can reuse the host runtime for an identical target, including
   // distro-specific shared libraries. This alias selects the official download.
   const compileTarget = target === 'bun-linux-x64' ? 'bun-linux-x64-baseline' : target
-  const child = Bun.spawn([
-    process.execPath, 'build', '--compile', '--minify-whitespace', '--minify-syntax',
-    'src/cli.ts', '--outfile', outfile,
-    ...target === 'native' ? [] : ['--target', compileTarget],
-  ], {
-    cwd: fileURLToPath(new URL('../', import.meta.url)),
-    stdin: 'inherit', stdout: 'inherit', stderr: 'inherit',
+  const result = await Bun.build({
+    ...bundle_options(),
+    compile: {
+      outfile: resolve(root, outfile),
+      ...target === 'native' ? {} : { target: compileTarget as Bun.Build.CompileTarget },
+    },
   })
-  const code = await child.exited
-  if (code !== 0) process.exit(code)
+  if (!result.success) throw new AggregateError(result.logs, 'Standalone build failed')
 }
 
 if (options.archive) await pack_standalone(builds)

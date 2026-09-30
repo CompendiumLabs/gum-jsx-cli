@@ -1,8 +1,9 @@
-import { chmod, copyFile, cp, mkdir, mkdtemp, readdir, readFile, realpath, rm, stat } from 'node:fs/promises'
+import { chmod, copyFile, cp, mkdir, mkdtemp, readdir, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHash } from 'node:crypto'
+import { licenses } from './licenses'
 import { version } from '../package.json'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
@@ -11,50 +12,6 @@ type Build = { target: string; outfile: string }
 async function command(args: string[], cwd: string) {
   const child = Bun.spawn(args, { cwd, stdout: 'inherit', stderr: 'inherit' })
   if (await child.exited !== 0) throw new Error(`${args[0]} failed while creating release archives`)
-}
-
-// Include installed runtime dependency licenses, plus bundled font/data notices.
-async function licenses(destination: string) {
-  const seen = new Set<string>()
-  async function visit(directory: string) {
-    directory = await realpath(directory)
-    if (seen.has(directory)) return
-    seen.add(directory)
-    const pkg = JSON.parse(await readFile(join(directory, 'package.json'), 'utf8'))
-    const output = join(destination, `${pkg.name.replaceAll('/', '__')}@${pkg.version}`)
-    for (const relative of ['', 'src/fonts', 'data']) {
-      const source = join(directory, relative)
-      let entries
-      try { entries = await readdir(source, { withFileTypes: true }) }
-      catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue
-        throw error
-      }
-      for (const entry of entries) {
-        if (!entry.isFile() || !/(license|notice|copying|^ofl)/i.test(entry.name)) continue
-        const target = join(output, relative, entry.name)
-        await mkdir(dirname(target), { recursive: true })
-        await copyFile(join(source, entry.name), target)
-      }
-    }
-    for (const name of Object.keys(pkg.dependencies ?? {})) {
-      let current = directory
-      while (true) {
-        const candidate = join(current, 'node_modules', name)
-        try { await stat(join(candidate, 'package.json')) }
-        catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
-          const parent = dirname(current)
-          if (parent === current) throw new Error(`Cannot find dependency notices for ${name}`)
-          current = parent
-          continue
-        }
-        await visit(candidate)
-        break
-      }
-    }
-  }
-  await visit(root)
 }
 
 export async function pack_standalone(builds: readonly Build[],

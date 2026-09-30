@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { px, em, THEMES } from '@gum-jsx/core'
+import { px, THEMES } from '@gum-jsx/core'
 import type { Fragment } from '@gum-jsx/core'
 import { mathToSvg } from '@gum-jsx/math'
 import { render_pdf } from '@gum-jsx/pdf'
@@ -11,20 +11,25 @@ import { render_png } from '@gum-jsx/png'
 import { decode } from 'fast-png'
 import { version } from '../package.json'
 
-const texDefaults = { font_size: px(64) } as const
 const exportSvg = mathToSvg
 function drawings(fragment: Fragment): Fragment['draw'][number][] {
   return [...fragment.draw, ...fragment.children.flatMap(child => drawings(child.fragment))]
 }
 const scratch = mkdtempSync(join(tmpdir(), 'gum-jsx-cli-'))
 afterAll(() => rmSync(scratch, { recursive: true, force: true }))
-async function cli(args: string[], input = '', entry = 'tex') {
-  const child = Bun.spawn([process.execPath, '--no-addons',
-    fileURLToPath(new URL(`../src/${entry}.ts`, import.meta.url)), ...args], {
-    stdin: new Blob([input]), stdout: 'pipe', stderr: 'pipe', cwd: scratch,
+let invocation = 0
+async function cli(args: string[], input = '', entry = 'cli') {
+  // Capture files so Node and Bun use the same output path without pipe buffering.
+  const output = join(scratch, `stdout-${++invocation}`)
+  const errors = join(scratch, `stderr-${invocation}`)
+  const child = Bun.spawn([process.env.GUM_CLI_RUNTIME ?? process.execPath, '--no-addons',
+    process.env.GUM_CLI_ENTRY ?? fileURLToPath(new URL(`../src/${entry}.ts`, import.meta.url)), ...args], {
+    stdin: new Blob([input]), stdout: Bun.file(output), stderr: Bun.file(errors), cwd: scratch,
+    env: process.env.GUM_CLI_RUNTIME ? { ...process.env, PATH: '' } : process.env,
   })
-  const [code, bytes, error] = await Promise.all([child.exited,
-    new Response(child.stdout).arrayBuffer(), new Response(child.stderr).text()])
+  const code = await child.exited
+  const [bytes, error] = await Promise.all([
+    Bun.file(output).arrayBuffer(), Bun.file(errors).text()])
   return { code, bytes: new Uint8Array(bytes), text: new TextDecoder().decode(bytes), error }
 }
 function png_size(bytes: Uint8Array) {
@@ -33,17 +38,15 @@ function png_size(bytes: Uint8Array) {
   return { width: view.getUint32(16), height: view.getUint32(20) }
 }
 
-test('all commands print the package version and exit without rendering', async () => {
-  for (const entry of ['cli', 'tex', 'mark']) {
-    for (const flag of ['--version', '-V']) {
-      const result = await cli([flag], 'throw new Error("Unexpected evaluation")', entry)
-      expect(result.code).toBe(0)
-      expect(result.text).toBe(`${version}\n`)
-      expect(result.error).toBe('')
-    }
-    const help = await cli(['--help'], '', entry)
-    expect(help.text).toContain('-V, --version')
+test('gum prints the package version and exits without rendering', async () => {
+  for (const flag of ['--version', '-V']) {
+    const result = await cli([flag], 'throw new Error("Unexpected evaluation")', 'cli')
+    expect(result.code).toBe(0)
+    expect(result.text).toBe(`${version}\n`)
+    expect(result.error).toBe('')
   }
+  const help = await cli(['--help'], '', 'cli')
+  expect(help.text).toContain('-V, --version')
 })
 
 test('gum renders named map coordinates and position spreads with the same geometry as tuples', async () => {
@@ -61,53 +64,49 @@ test('gum renders named map coordinates and position spreads with the same geome
   expect(named.text).toBe(tuples.text)
 })
 
-test('both CLIs crop PNG and kitty output in source pixels before applying ratio', async () => {
-  for (const entry of ['cli', 'tex']) {
-    const args = entry === 'tex' ? ['x^2'] : []
-    const source = entry === 'cli' ? '<Square width={px(40)} fill="red" />' : ''
-    const options = [...args, '--select', '10,5,12,8', '--ratio', '3', '--theme', 'light']
-    const png = await cli([...options, '-f', 'png'], source, entry)
-    expect(png.code).toBe(0)
-    expect(png_size(png.bytes)).toEqual({ width: 36, height: 24 })
-    const kitty = await cli(options, source, entry)
-    expect(kitty.code).toBe(0)
-    const encoded = [...kitty.text.matchAll(/\x1b_G[^;]*;([^\x1b]*)\x1b\\/g)].map(match => match[1]).join('')
-    expect(new Uint8Array(Buffer.from(encoded, 'base64'))).toEqual(png.bytes)
-    const unsupported = await cli([...options, '-f', 'svg'], source, entry)
-    for (const select of ['0,0,0,5', '1,2,3', 'NaN,0,2,2', '0,,2,2']) {
-      const invalid = await cli([...args, '--select', select], source, entry)
-      expect(invalid.code).toBe(1)
-      expect(invalid.error).toContain('select must be')
-    }
+test('gum crops PNG and kitty output in source pixels before applying ratio', async () => {
+  const args: string[] = []
+  const source = '<Square width={px(40)} fill="red" />'
+  const options = [...args, '--select', '10,5,12,8', '--ratio', '3', '--theme', 'light']
+  const png = await cli([...options, '-f', 'png'], source, 'cli')
+  expect(png.code).toBe(0)
+  expect(png_size(png.bytes)).toEqual({ width: 36, height: 24 })
+  const kitty = await cli(options, source, 'cli')
+  expect(kitty.code).toBe(0)
+  const encoded = [...kitty.text.matchAll(/\x1b_G[^;]*;([^\x1b]*)\x1b\\/g)].map(match => match[1]).join('')
+  expect(new Uint8Array(Buffer.from(encoded, 'base64'))).toEqual(png.bytes)
+  const unsupported = await cli([...options, '-f', 'svg'], source, 'cli')
+  for (const select of ['0,0,0,5', '1,2,3', 'NaN,0,2,2', '0,,2,2']) {
+    const invalid = await cli([...args, '--select', select], source, 'cli')
+    expect(invalid.code).toBe(1)
+    expect(invalid.error).toContain('select must be')
   }
 })
 
-test('PNG encoding presets reach file and terminal output in both CLIs', async () => {
-  for (const entry of ['cli', 'tex']) {
-    const args = entry === 'tex' ? ['x^2'] : []
-    const source = entry === 'cli' ? '<Text font-size={px(36)}>PNG encoding</Text>' : ''
-    const options = [...args, '--theme', 'light', '-W', '150', '-H', '50']
-    const json = await cli([...options, '-f', 'json'], source, entry)
-    expect(json.code).toBe(0)
-    for (const encoding of ['fast', 'standard'] as const) {
-      const expected = render_png(JSON.parse(json.text), { encoding })
-      const png = await cli([...options, '-f', 'png', '--png-encoding', encoding], source, entry)
-      expect(png.code, png.error).toBe(0)
-      expect(png.bytes).toEqual(new Uint8Array(expected))
-      const kitty = await cli([...options, '--png-encoding', encoding], source, entry)
-      expect(kitty.code, kitty.error).toBe(0)
-      const encoded = [...kitty.text.matchAll(/\x1b_G[^;]*;([^\x1b]*)\x1b\\/g)].map(match => match[1]).join('')
-      expect(new Uint8Array(Buffer.from(encoded, 'base64'))).toEqual(new Uint8Array(expected))
-      if (encoding === 'fast') {
-        const defaultPng = await cli([...options, '-f', 'png'], source, entry)
-        expect(defaultPng.bytes).toEqual(png.bytes)
-      }
+test('PNG encoding presets reach file and terminal output in gum', async () => {
+  const args: string[] = []
+  const source = '<Text font-size={px(36)}>PNG encoding</Text>'
+  const options = [...args, '--theme', 'light', '-W', '150', '-H', '50']
+  const json = await cli([...options, '-f', 'json'], source, 'cli')
+  expect(json.code).toBe(0)
+  for (const encoding of ['fast', 'standard'] as const) {
+    const expected = render_png(JSON.parse(json.text), { encoding })
+    const png = await cli([...options, '-f', 'png', '--png-encoding', encoding], source, 'cli')
+    expect(png.code, png.error).toBe(0)
+    expect(png.bytes).toEqual(new Uint8Array(expected))
+    const kitty = await cli([...options, '--png-encoding', encoding], source, 'cli')
+    expect(kitty.code, kitty.error).toBe(0)
+    const encoded = [...kitty.text.matchAll(/\x1b_G[^;]*;([^\x1b]*)\x1b\\/g)].map(match => match[1]).join('')
+    expect(new Uint8Array(Buffer.from(encoded, 'base64'))).toEqual(new Uint8Array(expected))
+    if (encoding === 'fast') {
+      const defaultPng = await cli([...options, '-f', 'png'], source, 'cli')
+      expect(defaultPng.bytes).toEqual(png.bytes)
     }
-    const invalid = await cli([...options, '--png-encoding', 'invalid'], source, entry)
-    expect(invalid.code).toBe(1)
-    expect(invalid.text).toBe('')
-    expect(invalid.error).toContain('Allowed choices')
   }
+  const invalid = await cli([...options, '--png-encoding', 'invalid'], source, 'cli')
+  expect(invalid.code).toBe(1)
+  expect(invalid.text).toBe('')
+  expect(invalid.error).toContain('Allowed choices')
 })
 
 test('direct PNG output preserves crop pixels, backgrounds, and full geometry without native addons', async () => {
@@ -130,15 +129,13 @@ test('direct PNG output preserves crop pixels, backgrounds, and full geometry wi
 })
 
 test('PNG and kitty outline text regardless of SVG text mode; emoji report an error', async () => {
-  for (const entry of ['cli', 'tex']) {
-    const source = entry === 'cli' ? '<Text>Text <Latex>x^2</Latex></Text>' : ''
-    const args = entry === 'tex' ? ['x^2'] : []
-    for (const format of ['png', 'kitty']) {
-      const path = await cli([...args, '-f', format, '--text-mode', 'path'], source, entry)
-      const live = await cli([...args, '-f', format, '--text-mode', 'live'], source, entry)
-      expect(live.code, live.error).toBe(0)
-      expect(live.bytes).toEqual(path.bytes)
-    }
+  const source = '<Text>Text <Latex>x^2</Latex></Text>'
+  const args: string[] = []
+  for (const format of ['png', 'kitty']) {
+    const path = await cli([...args, '-f', format, '--text-mode', 'path'], source, 'cli')
+    const live = await cli([...args, '-f', format, '--text-mode', 'live'], source, 'cli')
+    expect(live.code, live.error).toBe(0)
+    expect(live.bytes).toEqual(path.bytes)
   }
   const output = join(scratch, 'emoji.png')
   await Bun.write(output, 'keep me')
@@ -172,71 +169,10 @@ test('text mode defaults to paths and supports live prose and math while keeping
   const outlinedPdf = await cli(['-f', 'pdf', '--text-mode', 'path'], source, 'cli')
   expect(outlinedPdf.code, outlinedPdf.error).toBe(0)
   expect(pdf.bytes).toEqual(outlinedPdf.bytes)
-  const math = await cli([String.raw`x+\text{words}`, '-f', 'svg', '--text-mode', 'live'])
-  expect(math.code, math.error).toBe(0)
-  expect(math.text).toContain('<text ')
-  expect(math.text).not.toContain('<path ')
-  for (const entry of ['cli', 'tex']) {
-    const invalid = await cli(['--text-mode', 'invalid'], '', entry)
-    expect(invalid.code).toBe(1)
-    expect(invalid.error).toContain('Allowed choices')
-    expect(invalid.text).toBe('')
-  }
-})
-
-test('gum-tex literal, file, and stdin match the library SVG', async () => {
-  const tex = String.raw`\mathllap{x}\int_0^\infty e^{-t}\,dt`
-  await Bun.write(join(scratch, 'formula.tex'), tex)
-  const expected = exportSvg(tex, { font_size: px(40), padding: em(0.25), color: 'navy' }) + '\n'
-  for (const args of [[tex], ['-i', 'formula.tex'], [], ['-'], ['-i', '-']]) {
-    const result = await cli([...args, '-f', 'svg', '-s', '40', '-p', '0.25', '--color', 'navy'], tex)
-    expect(result.code).toBe(0)
-    expect(result.error).toBe('')
-    expect(result.text === expected).toBe(true)
-  }
-})
-
-test('gum-tex modes, macros, SVG metadata, and stats reach the shared renderer', async () => {
-  const tex = String.raw`\RR\to\f{x}`
-  const result = await cli([tex, '-f', 'svg', '--inline', '--no-strut', '--macro', String.raw`\RR=\mathbb{R}`,
-    '--macro', String.raw`\f=\frac{#1}{2}`, '--title', 'A < B & C', '--background', 'white', '--id-prefix', 'tex', '--stats'])
-  expect(result.code).toBe(0)
-  const expected = exportSvg(tex, { inline: true, strut: false,
-    macros: { '\\RR': String.raw`\mathbb{R}`, '\\f': String.raw`\frac{#1}{2}` },
-    title: 'A < B & C', background: 'white', id_prefix: 'tex', ...texDefaults }) + '\n'
-  expect(result.text === expected).toBe(true)
-  expect(JSON.parse(result.error).layouts).toBeGreaterThan(0)
-  const tree = await cli(['x^2', '-f', 'tree'])
-  expect(tree.code).toBe(0)
-  expect(tree.text).toContain('MathViewport')
-  const json = await cli(['x^2', '-f', 'json'])
-  expect(json.code).toBe(0)
-  expect(JSON.parse(json.text).children[0].fragment.children[0].fragment.label).toBe('x^2')
-})
-
-test('PNG dimensions follow the fractional SVG viewport and kitty encodes the same PNG', async () => {
-  const text = String.raw`\smash{\widehat{ABC}}`
-  const svg = mathToSvg(text, { strut: false, ...texDefaults })
-  const [, width, height] = /width="([\d.]+)" height="([\d.]+)"/.exec(svg)!
-  const png = await cli([text, '--no-strut', '-f', 'png', '--ratio', '2'])
-  expect(png.code).toBe(0)
-  expect(png_size(png.bytes)).toEqual({ width: Math.ceil(Number(width) * 2), height: Math.ceil(Number(height) * 2) })
-  const kitty = await cli([text, '--no-strut', '--ratio', '2', '--theme', 'light'])
-  expect(kitty.code).toBe(0)
-  const encoded = [...kitty.text.matchAll(/\x1b_G[^;]*;([^\x1b]*)\x1b\\/g)].map(match => match[1]).join('')
-  expect(new Uint8Array(Buffer.from(encoded, 'base64'))).toEqual(png.bytes)
-  const empty = await cli(['', '--no-strut', '-f', 'png'])
-  expect(empty.code).toBe(0)
-  expect(png_size(empty.bytes)).toEqual({ width: 1, height: 1 })
-})
-
-test('output extensions and explicit formats work for file output', async () => {
-  expect((await cli(['x', '-o', 'formula.svg'])).code).toBe(0)
-  expect((await Bun.file(join(scratch, 'formula.svg')).text()) === exportSvg('x', texDefaults) + '\n').toBe(true)
-  expect((await cli(['x', '-o', 'formula.png'])).code).toBe(0)
-  png_size(new Uint8Array(await Bun.file(join(scratch, 'formula.png')).arrayBuffer()))
-  expect((await cli(['x', '-o', 'override.png', '-f', 'svg'])).code).toBe(0)
-  expect((await Bun.file(join(scratch, 'override.png')).text()).startsWith('<svg ')).toBe(true)
+  const invalid = await cli(['--text-mode', 'invalid'], '', 'cli')
+  expect(invalid.code).toBe(1)
+  expect(invalid.error).toContain('Allowed choices')
+  expect(invalid.text).toBe('')
 })
 
 const pdfInputs = [
@@ -246,10 +182,9 @@ const pdfInputs = [
       <Latex>x^2</Latex>
     </VStack>
   </Svg>` },
-  { entry: 'tex', args: [String.raw`\frac{1}{\sqrt{x}}`, '--fit', '-W', '160', '-H', '100'], input: '' },
 ]
 
-test('both commands emit binary PDF from the laid-out fragment with shared render options', async () => {
+test('gum emits binary PDF from the laid-out fragment with shared render options', async () => {
   for (const { entry, args, input } of pdfInputs) {
     for (const theme of [[], ['--theme', 'dark']]) {
       const options = [...args, ...theme]
@@ -311,7 +246,7 @@ test('precision flag controls SVG, PDF, and tree numbers and accepts full precis
   }
 })
 
-test('both commands infer PDF filenames and let an explicit format override the extension', async () => {
+test('gum infers PDF filenames and lets an explicit format override the extension', async () => {
   for (const { entry, args, input } of pdfInputs) {
     const stdout = await cli([...args, '-f', 'pdf'], input, entry)
     expect(stdout.code).toBe(0)
@@ -349,47 +284,6 @@ test('PDF errors reach stderr without emitting or overwriting output', async () 
   }
 })
 
-test('math shrinks by default, no-fit clips, and explicit fit permits enlargement', async () => {
-  const plain = JSON.parse((await cli(['x+y', '-f', 'json'])).text)
-  const small = JSON.parse((await cli(['x+y', '-W', '5', '-f', 'json'])).text)
-  expect(small.size.width).toBe(5)
-  expect(small.size.height).toBeCloseTo(plain.size.height * 5 / plain.size.width, 8)
-  expect(small.overflow.right).toBe(0)
-  const clipped = JSON.parse((await cli(['x+y', '--no-fit', '-W', '5', '-f', 'json'])).text)
-  expect(clipped.size.width).toBe(5)
-  expect(clipped.size.height).toBe(plain.size.height)
-  expect(clipped.overflow.right).toBeGreaterThan(0)
-  const fit = JSON.parse((await cli(['x+y', '--fit', '-W', '200', '-f', 'json'])).text)
-  expect(fit.size.width).toBe(200)
-  expect(fit.size.height).toBeCloseTo(plain.size.height * 200 / plain.size.width, 8)
-  expect(fit.children[0].fragment.children[0].transform[0]).toBeCloseTo(200 / plain.size.width, 8)
-  const box = JSON.parse((await cli(['x+y', '--fit', '-W', '200', '-H', '100', '-f', 'json'])).text)
-  expect(box.size).toEqual({ width: 200, height: 100 })
-})
-
-test('errors return status 1 without output and help documents the input contract', async () => {
-  const failures: [string[], string][] = [
-    [['{', '-f', 'svg'], 'parse:'], [[String.raw`\phase{x}`, '-f', 'svg'], 'unsupported:'],
-    [['x', '-i', 'formula.tex'], 'not both'], [['--fit', 'x'], 'requires'],
-    [['x', '-s', '0'], 'positive'], [['x', '-s', 'NaN'], 'finite'], [['x', '-p', '-1'], 'nonnegative'],
-    [['x', '--macro', 'invalid'], 'macro must'], [['x', '--ratio', '0'], 'positive'],
-    [['x', '-o', 'unknown.xyz'], 'Unknown format'], [['-i', 'missing.tex'], 'ENOENT'],
-    [['x', '-W', '0', '-f', 'png'], 'positive'],
-    [['x', '--theme', 'sepia'], 'Allowed choices'],
-  ]
-  for (const [args, message] of failures) {
-    const result = await cli(args)
-    expect(result.code).toBe(1)
-    expect(result.text).toBe('')
-    expect(result.error).toContain(message)
-  }
-  const help = await cli(['--help'])
-  expect(help.code).toBe(0)
-  expect(help.text).toContain('Literal TeX')
-  expect(help.text).toContain('--fit')
-  expect(help.text).toContain('-t, --theme <theme>')
-})
-
 test('the JSX gum command retains SVG, raster, inspection, and math bindings', async () => {
   const jsx = 'return mathToElement(String.raw`\\frac{1}{2}`, { font_size: px(36) })'
   const result = await cli(['-f', 'svg'], jsx, 'cli')
@@ -425,25 +319,6 @@ test('JSX fallback offers size unsized canvases and preserve explicit and intrin
   expect((await fragment(aspect, ['-H', '90'])).size).toEqual({ width: 180, height: 90 })
 })
 
-test('gum-mark reads Markdown from stdin or a file and renders embedded math', async () => {
-  const stdin = await cli(['--inline-height', '42'], 'A $x^2$ formula\n', 'mark')
-  expect(stdin.code).toBe(0)
-  expect(stdin.error).toBe('')
-  const encoded = [...stdin.text.matchAll(/\x1b_G[^;]*;([^\x1b]*)\x1b\\/g)]
-    .map(match => match[1]).join('')
-  expect(png_size(new Uint8Array(Buffer.from(encoded, 'base64'))).height).toBe(42)
-
-  await Bun.write(join(scratch, 'notes.md'), '# Notes\n\nText **here**.\n')
-  const file = await cli(['notes.md'], '', 'mark')
-  expect(file.code).toBe(0)
-  expect(file.text).toContain('# Notes')
-  expect(file.text).toContain('**here**')
-
-  const invalid = await cli(['--height', '0'], '', 'mark')
-  expect(invalid.code).toBe(1)
-  expect(invalid.error).toContain('positive and finite')
-})
-
 test('themes honor source selection, CLI overrides, and explicit JSX paints', async () => {
   const source = `<Svg theme="dark" width={px(90)} height={px(40)}>
     <HStack>
@@ -476,54 +351,18 @@ test('themes honor source selection, CLI overrides, and explicit JSX paints', as
   expect(backdrop.text).toMatch(/<rect\b[^>]*fill="navy"/)
 })
 
-test('TeX defaults to light exports and lets theme or color override the foreground', async () => {
-  for (const [args, foreground] of [
-    [[], THEMES.light.foreground],
-    [['--theme', 'light'], THEMES.light.foreground],
-    [['--theme', 'dark'], THEMES.dark.foreground],
-    [['-t', 'dark'], THEMES.dark.foreground],
-    [['--theme', 'dark', '--color', 'navy'], 'navy'],
-  ] as const) {
-    const result = await cli(['x^2', '-f', 'json', ...args])
-    expect(result.code).toBe(0)
-    const fragment = JSON.parse(result.text) as Fragment
-    expect(fragment.draw).toEqual([])
-    const glyphs = drawings(fragment).filter(draw => draw.kind === 'path')
-    expect(glyphs.length).toBeGreaterThan(0)
-    expect(glyphs.every(draw => draw.fill === foreground)).toBe(true)
-  }
-})
-
-test('TeX backgrounds are optional render options independent of the theme', async () => {
-  for (const theme of ['light', 'dark']) {
-    const args = ['x^2', '--theme', theme]
-    const transparent = await cli([...args, '-f', 'svg'])
-    expect(transparent.code).toBe(0)
-    expect(transparent.text).not.toMatch(/<rect\b[^>]*fill=/)
-    const painted = await cli([...args, '-f', 'svg', '--background', 'navy'])
-    expect(painted.code).toBe(0)
-    expect(painted.text).toContain('fill="navy"')
-    expect(painted.text).toMatch(new RegExp(`<path\\b[^>]*fill="${THEMES[theme as keyof typeof THEMES].foreground}"`))
-    const tree = await cli([...args, '-f', 'json', '--background', 'navy'])
-    expect(tree.code).toBe(0)
-    expect(JSON.parse(tree.text).draw).toEqual([])
-  }
-})
-
-test('kitty defaults to dark for both JSX and TeX while PNG defaults to light', async () => {
-  for (const entry of ['cli', 'tex']) {
-    const args = entry === 'tex' ? ['x^2'] : []
-    const source = entry === 'cli' ? '<Text>Theme</Text>' : ''
-    const kitty = await cli(args, source, entry)
-    expect(kitty.code).toBe(0)
-    const encoded = [...kitty.text.matchAll(/\x1b_G[^;]*;([^\x1b]*)\x1b\\/g)].map(match => match[1]).join('')
-    const dark = await cli([...args, '-f', 'png', '--theme', 'dark'], source, entry)
-    expect(dark.code).toBe(0)
-    expect(Buffer.from(encoded, 'base64').equals(Buffer.from(dark.bytes))).toBe(true)
-    const light = await cli([...args, '-f', 'png'], source, entry)
-    expect(light.code).toBe(0)
-    expect(Buffer.from(light.bytes).equals(Buffer.from(dark.bytes))).toBe(false)
-  }
+test('kitty defaults to dark for JSX while PNG defaults to light', async () => {
+  const args: string[] = []
+  const source = '<Text>Theme</Text>'
+  const kitty = await cli(args, source, 'cli')
+  expect(kitty.code).toBe(0)
+  const encoded = [...kitty.text.matchAll(/\x1b_G[^;]*;([^\x1b]*)\x1b\\/g)].map(match => match[1]).join('')
+  const dark = await cli([...args, '-f', 'png', '--theme', 'dark'], source, 'cli')
+  expect(dark.code).toBe(0)
+  expect(Buffer.from(encoded, 'base64').equals(Buffer.from(dark.bytes))).toBe(true)
+  const light = await cli([...args, '-f', 'png'], source, 'cli')
+  expect(light.code).toBe(0)
+  expect(Buffer.from(light.bytes).equals(Buffer.from(dark.bytes))).toBe(false)
 })
 
 test('gum prints plain values returned by the source as text', async () => {
