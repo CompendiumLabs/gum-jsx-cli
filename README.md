@@ -1,7 +1,7 @@
 <div align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/logo-dark.svg" />
-    <img src="images/logo.svg" alt="Gum JSX" width="500" />
+    <img src="images/logo.svg" alt="Gum" width="300" />
   </picture>
   <br />
   <img src="images/nexus.svg" alt="Layered red-to-blue wave packets" width="250" />
@@ -35,7 +35,8 @@ npm install -g @gum-jsx/cli@beta
 ```
 
 The npm package contains a prebuilt JavaScript bundle, fonts, map data, and the
-PNG renderer. It has no runtime package dependencies and runs under Node without Bun.
+PNG renderer. It has no runtime package dependencies. Bun 1.4.2 or newer works
+equally well as an alternative runtime.
 
 This installs `gum` for JSX figures. To work from a
 [source checkout](https://github.com/CompendiumLabs/gum-jsx#development), run

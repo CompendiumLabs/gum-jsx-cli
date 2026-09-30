@@ -1,6 +1,6 @@
 {
   "name": "@gum-jsx/cli",
-  "description": "Command-line rendering for gum-jsx.",
+  "description": "Command-line rendering for Gum.",
   "type": "module",
   "license": "MIT",
   "bin": {
