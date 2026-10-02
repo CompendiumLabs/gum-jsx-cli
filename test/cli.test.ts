@@ -7,6 +7,7 @@ import { px, THEMES } from '@gum-jsx/core'
 import type { Fragment } from '@gum-jsx/core'
 import { mathToSvg } from '@gum-jsx/math'
 import { render_pdf } from '@gum-jsx/pdf'
+import { render_pptx } from '@gum-jsx/pptx'
 import { render_png } from '@gum-jsx/png'
 import { decode } from 'fast-png'
 import { version } from '../package.json'
@@ -263,7 +264,7 @@ test('gum infers PDF filenames and lets an explicit format override the extensio
     expect(await Bun.file(join(scratch, `${entry}-svg.pdf`)).text()).toStartWith('<svg ')
     const help = await cli(['--help'], '', entry)
     expect(help.text).toContain('"pdf"')
-    expect(help.text).toContain('SVG or PDF document title')
+    expect(help.text).toContain('SVG, PDF, or PPTX document title')
   }
 })
 
@@ -409,7 +410,7 @@ test('invalid multiple inputs are rejected before evaluation or overwriting outp
   const output = join(scratch, 'extra-inputs.pdf')
   await Bun.write(output, 'keep me')
   for (const [inputs, message] of [
-    [['first.jsx', 'second.jsx', '-f', 'svg'], 'require PDF output'],
+    [['first.jsx', 'second.jsx', '-f', 'svg'], 'require PDF or PPTX output'],
     [['first.jsx', 'extra-deck'], 'Cannot mix directories and files'],
     [['extra-deck', 'first.jsx'], 'Cannot mix directories and files'],
     [['extra-deck', 'extra-deck'], 'Cannot mix directories and files'],
@@ -501,7 +502,7 @@ test('directories use natural JSX filename order and exclude a declared prelude'
   expect(withPrelude.bytes).toEqual(result.bytes)
 })
 
-test('invalid decks and non-PDF deck output fail without overwriting output', async () => {
+test('invalid decks and unsupported deck output fail without overwriting output', async () => {
   const dir = join(scratch, 'invalid-deck'), output = join(scratch, 'protected.pdf')
   mkdirSync(dir)
   await Bun.write(output, 'keep me')
@@ -515,7 +516,7 @@ test('invalid decks and non-PDF deck output fail without overwriting output', as
     [{ slides: [] }, 'no slides'],
     [{ slides: ['missing.jsx'] }, 'ENOENT'],
     [{ prelude: 'missing.jsx', slides: ['good.jsx'] }, 'ENOENT'],
-    [{ slides: ['good.jsx', 'bad.jsx'] }, 'PDF pages must return a Gum element'],
+    [{ slides: ['good.jsx', 'bad.jsx'] }, 'Deck slides must return a Gum element'],
   ] as const) {
     await Bun.write(join(dir, 'index.json'), JSON.stringify(manifest))
     const result = await cli(['invalid-deck', '-o', output], '', 'cli')
@@ -527,14 +528,169 @@ test('invalid decks and non-PDF deck output fail without overwriting output', as
   for (const format of ['svg', 'png', 'kitty', 'tree', 'json']) {
     const result = await cli(['invalid-deck', '-f', format, '-o', output], '', 'cli')
     expect(result.code).toBe(1)
-    expect(result.error).toContain('require PDF output')
+    expect(result.error).toContain('require PDF or PPTX output')
     expect(result.text).toBe('')
     expect(await Bun.file(output).text()).toBe('keep me')
   }
   for (const inputs of [['invalid-deck'], ['invalid-deck/good.jsx', 'invalid-deck/bad.jsx']]) {
     const inferred = await cli([...inputs, '-o', 'deck.svg'], '', 'cli')
     expect(inferred.code).toBe(1)
-    expect(inferred.error).toContain('require PDF output')
+    expect(inferred.error).toContain('require PDF or PPTX output')
     expect(await Bun.file(join(scratch, 'deck.svg')).exists()).toBe(false)
   }
+})
+
+test('PPTX renders native vectors to stdout or inferred files with shared options', async () => {
+  const source = `<Svg width={px(320)} height={px(180)}>
+    <VStack>
+      <Text>PowerPoint</Text>
+      <Latex>x^2</Latex>
+    </VStack>
+  </Svg>`
+  const json = await cli(['-f', 'json'], source)
+  expect(json.code, json.error).toBe(0)
+  const options = { title: 'Gum & PowerPoint', background: '#eee' }
+  const expected = render_pptx(JSON.parse(json.text), options)
+  const args = ['--title', options.title, '--background', options.background]
+  const result = await cli(['-f', 'pptx', '--text-mode', 'live', '--stats', ...args], source)
+  expect(result.code, result.error).toBe(0)
+  expect<Uint8Array>(result.bytes).toEqual(expected)
+  expect(JSON.parse(result.error).layouts).toBeGreaterThan(0)
+  for (const [filename, format] of [['figure.pptx', []], ['pptx.svg', ['-f', 'pptx']]] as const) {
+    const written = await cli(['-o', filename, ...format, ...args], source)
+    expect(written.code, written.error).toBe(0)
+    expect(written.bytes.length).toBe(0)
+    expect<Uint8Array>(new Uint8Array(await Bun.file(join(scratch, filename)).arrayBuffer())).toEqual(expected)
+  }
+})
+
+test('PPTX decks use argument order or the existing manifest, prelude, and title', async () => {
+  const dir = join(scratch, 'pptx-deck')
+  await Bun.write(join(dir, 'prelude.jsx'), 'const ink = "red"')
+  const sources = [
+    `<Svg width={px(320)} height={px(180)}>
+      <Rect fill={ink} stroke="none" />
+    </Svg>`,
+    `<Svg width={px(320)} height={px(180)}>
+      <Text>Second</Text>
+    </Svg>`,
+  ]
+  await Bun.write(join(dir, 'first.jsx'), sources[0])
+  await Bun.write(join(dir, 'second.jsx'), sources[1])
+  await Bun.write(join(dir, 'index.json'), JSON.stringify({
+    title: 'PPTX deck', prelude: 'prelude.jsx', slides: ['second.jsx', 'first.jsx'],
+  }))
+  const fragments = []
+  for (const source of sources.toReversed()) {
+    const json = await cli(['-f', 'json'], 'const ink = "red";\nreturn ' + source)
+    expect(json.code, json.error).toBe(0)
+    fragments.push(JSON.parse(json.text) as Fragment)
+  }
+  const result = await cli(['pptx-deck', '-o', 'deck.pptx'])
+  expect(result.code, result.error).toBe(0)
+  expect<Uint8Array>(new Uint8Array(await Bun.file(join(scratch, 'deck.pptx')).arrayBuffer()))
+    .toEqual(render_pptx(fragments, { title: 'PPTX deck' }))
+  const ordered = await cli(['pptx-deck/second.jsx', 'pptx-deck/second.jsx', '-f', 'pptx', '--title', 'Two'])
+  expect(ordered.code, ordered.error).toBe(0)
+  expect<Uint8Array>(ordered.bytes).toEqual(render_pptx([fragments[0], fragments[0]], { title: 'Two' }))
+})
+
+test('PPTX rejects unsupported output without emitting bytes or replacing files', async () => {
+  const output = join(scratch, 'protected.pptx')
+  await Bun.write(output, 'keep me')
+  for (const [source, message] of [
+    ['<Svg width={px(320)} height={px(180)}><Text>😀</Text></Svg>', 'live text is not supported'],
+    ['<Svg width={px(20)} height={px(20)} />', '1–56 inches'],
+  ]) {
+    const result = await cli(['-o', output], source)
+    expect(result.code).toBe(1)
+    expect(result.bytes.length).toBe(0)
+    expect(result.error).toContain(message)
+    expect(await Bun.file(output).text()).toBe('keep me')
+  }
+  await Bun.write(join(scratch, 'small-slide.jsx'), '<Svg width={px(320)} height={px(180)} />')
+  await Bun.write(join(scratch, 'large-slide.jsx'), '<Svg width={px(640)} height={px(360)} />')
+  const mixed = await cli(['small-slide.jsx', 'large-slide.jsx', '-o', output])
+  expect(mixed.code).toBe(1)
+  expect(mixed.error).toContain('all slides must match')
+  expect(await Bun.file(output).text()).toBe('keep me')
+})
+
+const video_source = `return {
+  size: [64, 48], fps: 2, duration: 1,
+  frame: ({time}) => <Svg background={lerp(0, 1, ease_in_out(progress(time, 0, 1))) > 0 ? 'blue' : 'red'} />,
+}`
+
+test('gum exports MP4 from stdin to stdout, inferred files, and explicit-format files', async () => {
+  const streamed = await cli(['-f', 'mp4'], video_source)
+  expect(streamed.code, streamed.error).toBe(0)
+  expect(Buffer.from(streamed.bytes.subarray(4, 8)).toString()).toBe('ftyp')
+  expect(streamed.error).toBe('')
+  for (const [name, args] of [
+    ['animation.mp4', []], ['animation.bin', ['-f', 'mp4']],
+  ] as const) {
+    const path = join(scratch, name)
+    const saved = await cli([...args, '-o', path], video_source)
+    expect(saved.code, saved.error).toBe(0)
+    expect(saved.bytes.length).toBe(0)
+    expect(new Uint8Array(await Bun.file(path).arrayBuffer())).toEqual(streamed.bytes)
+  }
+  const higher_quality = await cli(['-f', 'mp4', '--qp', '10'], video_source)
+  expect(higher_quality.code, higher_quality.error).toBe(0)
+})
+
+test('gum previews video frames as Kitty and PNG with declared dimensions', async () => {
+  const first = await cli(['-f', 'png'], video_source)
+  expect(first.code, first.error).toBe(0)
+  expect(png_size(first.bytes)).toEqual({ width: 64, height: 48 })
+  expect([...decode(first.bytes).data.slice(0, 3)]).toEqual([255, 0, 0])
+  const later = await cli(['-f', 'png', '--time', '0.75', '-W', '80', '-H', '60'], video_source)
+  expect(later.code, later.error).toBe(0)
+  expect(png_size(later.bytes)).toEqual({ width: 80, height: 60 })
+  expect([...decode(later.bytes).data.slice(0, 3)]).toEqual([0, 0, 255])
+  const kitty = await cli(['--time', '0.75', '-W', '80', '-H', '60'], video_source)
+  expect(kitty.code, kitty.error).toBe(0)
+  const encoded = [...kitty.text.matchAll(/\x1b_G[^;]*;([^\x1b]*)\x1b\\/g)].map(match => match[1]).join('')
+  expect(new Uint8Array(Buffer.from(encoded, 'base64'))).toEqual(later.bytes)
+})
+
+test('video export honors viewport, theme, and background overrides', async () => {
+  const source = `return { size:[64,48], fps:2, duration:1,
+    frame:() => <Rect width={px(20)} height={px(20)} fill="theme:foreground" /> }`
+  const result = await cli(['-f', 'mp4', '-W', '80', '-H', '60', '--theme', 'dark', '-b', '#123456'], source)
+  expect(result.code, result.error).toBe(0)
+  const { render_mp4, evaluate_mp4 } = await import('@gum-jsx/mp4')
+  const expected: Uint8Array[] = []
+  const video = evaluate_mp4(`return { size:[80,60], fps:2, duration:1, background:'#123456',
+    frame:() => <Svg theme="dark"><Rect width={px(20)} height={px(20)} fill="theme:foreground" /></Svg> }`)
+  await render_mp4(video, bytes => { expected.push(bytes) })
+  expect(result.bytes).toEqual(new Uint8Array(Buffer.concat(expected)))
+})
+
+test('gum validates MP4 and frame-preview options', async () => {
+  for (const args of [
+    ['-f', 'mp4', '--qp', '9'], ['-f', 'mp4', '--qp', '18.5'],
+    ['-f', 'png', '--qp', '18'], ['-f', 'mp4', '--time', '0'],
+    ['-f', 'mp4', '--ratio', '2'], ['-f', 'mp4', '--select', '0,0,2,2'],
+    ['-f', 'mp4', '--stats'], ['--time', '1'], ['--time', '-1'],
+    ['-f', 'mp4', '-W', '65'],
+  ]) {
+    const result = await cli(args, video_source)
+    expect(result.code, args.join(' ')).toBe(1)
+    expect(result.bytes.length).toBe(0)
+  }
+  expect((await cli(['--time', '0'], '<Circle />')).code).toBe(1)
+  expect((await cli(['-f', 'mp4'], '<Circle />')).code).toBe(1)
+})
+
+test('failed MP4 export preserves the destination', async () => {
+  const output = join(scratch, 'existing.mp4')
+  await Bun.write(output, 'existing')
+  const result = await cli(['-o', output], `return {
+    size:[64,48], fps:2, duration:1,
+    frame:({frame}) => { if (frame) throw new Error('frame failure'); return <Circle /> },
+  }`)
+  expect(result.code).toBe(1)
+  expect(result.error).toContain('frame failure')
+  expect(await Bun.file(output).text()).toBe('existing')
 })

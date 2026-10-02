@@ -4,6 +4,7 @@ import { available, exact, make_request, layout_element, render_svg, inspect_fra
 import { createMathFonts } from '@gum-jsx/math'
 import { render_png } from '@gum-jsx/png'
 import { render_pdf } from '@gum-jsx/pdf'
+import { render_pptx } from '@gum-jsx/pptx'
 import { format_image } from './kitty'
 
 import type { ThemeName, LayoutElementResult, TextRenderMode } from '@gum-jsx/core'
@@ -56,6 +57,9 @@ function render(result: LayoutElementResult, format: string, values: RenderOptio
     output = render_pdf(result.fragment, {
       background: values.background, title: values.title, precision: values.precision,
     })
+  }
+  else if (format === 'pptx') {
+    output = render_pptx(result.fragment, { background: values.background, title: values.title })
   }
   else if (format === 'png' || format === 'kitty') {
     const { fragment } = result

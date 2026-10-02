@@ -2,6 +2,9 @@
   "name": "@gum-jsx/cli",
   "description": "Command-line rendering for Gum.",
   "type": "module",
+  "exports": {
+    "./kitty": "./src/kitty.ts"
+  },
   "license": "MIT",
   "bin": {
     "gum": "dist/npm/cli.js"
@@ -25,8 +28,10 @@
     "commander": "^14.0.3",
     "@gum-jsx/core": "2.0.0",
     "@gum-jsx/math": "2.0.0",
+    "@gum-jsx/mp4": "0.1.0",
     "@gum-jsx/maps": "2.0.0",
     "@gum-jsx/pdf": "2.0.0",
+    "@gum-jsx/pptx": "2.0.0",
     "@gum-jsx/png": "2.0.0"
   },
   "version": "2.0.0",
@@ -47,6 +52,7 @@
     "bun": ">=1.4.2"
   },
   "files": [
+    "src/kitty.ts",
     "dist/npm",
     "README.md",
     "LICENSE"

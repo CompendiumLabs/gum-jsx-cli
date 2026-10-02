@@ -8,6 +8,7 @@ import { validate_inputs, output_options, run } from './args'
 import { layout, render } from './render'
 import { layout_deck, render_deck } from './deck'
 import { create_evaluator } from './plugins'
+import { is_video, prepare_video, export_video } from './video'
 
 import type { RenderOptions } from './args'
 import type { LayoutOptions } from './render'
@@ -17,7 +18,7 @@ type CliOptions = RenderOptions & { plugin: string[] }
 const program0 = new Command()
   .name('gum')
   .version(version)
-  .description('Render JSX files or stdin, or a deck directory as PDF. Unsized figures receive a 640 × 480 offer; source sizes and natural content sizes are retained.')
+  .description('Render JSX figures or MP4 animations from files or stdin, or a deck directory as PDF or PPTX. Unsized figures receive a 640 × 480 offer; source sizes and natural content sizes are retained.')
   .allowExcessArguments(false)
   .argument('[files...]', 'JSX files or one deck directory (omit or use - for stdin)', ['-'])
 
@@ -28,18 +29,31 @@ const program = output_options(program0)
     const inputs = validate_inputs(files, values)
     const evaluator = await create_evaluator(values.plugin)
     if (inputs.multi) {
-      const { deck } = inputs
+      const { deck, format } = inputs
       const options = { theme: values.theme, width: values.width, height: values.height }
       const result = layout_deck(deck, evaluator, options)
-      render_deck(result, values)
+      render_deck(result, values, format)
     } else {
       const { file, format } = inputs
       const defaultTheme = format == 'kitty' ? 'dark' : 'light'
       const options: LayoutOptions = { theme: values.theme, defaultTheme, width: values.width, height: values.height,
-        textMode: ['pdf', 'png', 'kitty'].includes(format) ? 'path' : values.textMode }
+        textMode: ['pdf', 'pptx', 'png', 'kitty'].includes(format) ? 'path' : values.textMode }
       const name = file === '-' ? 'stdin.jsx' : resolve(file)
       const source = readFileSync(file === '-' ? 0 : file, 'utf8')
-      const tree = evaluator.evaluate(source, { name })
+      let tree = evaluator.evaluate(source, { name })
+      if (format === 'mp4') return export_video(prepare_video(tree, values), values)
+      if (is_video(tree)) {
+        const video = prepare_video(tree, values)
+        const time = values.time ?? 0
+        if (time >= video.duration) throw new Error('--time must be less than the video duration')
+        const frame = Math.floor(time * video.fps)
+        tree = video.frame({ time: frame / video.fps, frame, fps: video.fps })
+        options.width = video.size[0]
+        options.height = video.size[1]
+        values.background ??= video.background ?? '#ffffff'
+      } else if (values.time !== undefined) {
+        throw new Error('--time requires a video source')
+      }
       const result = layout(tree, options)
       return render(result, format, values)
     }

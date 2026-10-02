@@ -29,7 +29,9 @@ test('npm package installs offline and runs under Node and Bun, with Bun-only pl
     expect(files.some(file => file.endsWith('.ttf'))).toBe(true)
     expect(files.some(file => file.endsWith('/OFL.txt'))).toBe(true)
     expect(files.some(file => file.includes('@gum-jsx__png') && file.endsWith('/THIRD_PARTY_NOTICES.md'))).toBe(true)
-    expect(files.some(file => file.startsWith('src/') || file.startsWith('test/'))).toBe(false)
+    expect(files.some(file => file.includes('@gum-jsx__mp4') && file.endsWith('/THIRD_PARTY_NOTICES.md'))).toBe(true)
+    expect(files.filter(file => file.startsWith('src/'))).toEqual(['src/kitty.ts'])
+    expect(files.some(file => file.startsWith('test/'))).toBe(false)
     expect(files.every(file => !file.startsWith('dist/') || file.startsWith('dist/npm/'))).toBe(true)
 
     const consumer = join(scratch, 'consumer')

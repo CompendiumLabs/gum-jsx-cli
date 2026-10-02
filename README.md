@@ -24,7 +24,7 @@
 
 Gum is a JSX language for vector graphics. The CLI is the fastest way in: write a
 figure in a `.jsx` file, render it with `gum`, and keep the source alongside your
-project. Output formats include SVG, PNG, PDF, and kitty graphics. Elements, math
+project. Output formats include SVG, PNG, PDF, PPTX, MP4, and kitty graphics. Elements, math
 functions, colors, and layout helpers are already in scope. The figures above are
 Gum output; their sources are [logo.jsx](images/logo.jsx) and [nexus.jsx](images/nexus.jsx).
 
@@ -35,7 +35,7 @@ npm install -g @gum-jsx/cli
 ```
 
 The npm package contains a prebuilt JavaScript bundle, fonts, map data, and the
-PNG renderer. It has no runtime package dependencies. Bun 1.4.2 or newer works
+PNG and MP4 renderers. It has no runtime package dependencies. Bun 1.4.2 or newer works
 equally well as an alternative runtime.
 
 This installs `gum` for JSX figures. To work from a
@@ -77,7 +77,7 @@ bun run standalone:build --target=bun-darwin-arm64 --outfile dist/gum-macos
 ```
 
 The executable includes the Bun runtime, core and math fonts, map data, and the
-PNG WebAssembly renderer. Users need no Bun installation or `node_modules` for
+PNG and MP4 WebAssembly renderers. Users need no Bun installation or `node_modules` for
 rendering. This build produces only `gum`.
 
 For a local build using the installed Bun runtime, or to test a release executable:
@@ -199,7 +199,7 @@ printf '%s\n' '<Square width={px(40)} fill="tomato" />' | gum -f svg
 
 `gum` reads from stdin if you omit the input or pass `-`. Input and output paths
 are relative to the directory where you run the command. An output extension
-selects SVG, PNG, or PDF. For a file or stdin, `gum` defaults to kitty graphics
+selects SVG, PNG, PDF, or PPTX. For a file or stdin, `gum` defaults to kitty graphics
 on stdout; directories and multiple files default to PDF. Use `-f svg` to send SVG text to
 stdout. The full options are below.
 
@@ -214,18 +214,20 @@ Run `gum [options] [files...]`:
 | Option | Meaning |
 |---|---|
 | `files...` | JSX files or one deck directory; omit or use `-` for stdin. |
-| `-f, --format <format>` | Output format: `kitty`, `svg`, `png`, `pdf`, `tree`, or `json`. Defaults to kitty or the output extension for a file; directories and multiple files require PDF. |
+| `-f, --format <format>` | Output format: `kitty`, `svg`, `png`, `pdf`, `pptx`, `mp4`, `tree`, or `json`. Defaults to kitty or the output extension for a file; directories and multiple files require PDF or PPTX. |
 | `-o, --output <file>` | Write to a file instead of stdout. |
+| `--time <seconds>` | Preview one video frame; defaults to 0. Omit for MP4 export. |
+| `--qp <number>` | MP4 quantizer, 10–51; lower is higher quality. Default: 18. |
 | `-W, --width <pixels>` | Set the viewport width. |
 | `-H, --height <pixels>` | Set the viewport height. |
 | `-r, --ratio <number>` | PNG/kitty sampling ratio, default `1`. |
 | `--select <x,y,width,height>` | Crop PNG/kitty to a box in source pixels. |
 | `-b, --background <color>` | Paint the viewport background. |
 | `-t, --theme <theme>` | `light` or `dark`; defaults to the source theme, or dark for kitty and light otherwise. |
-| `--title <text>` | Set the SVG or PDF document title. |
+| `--title <text>` | Set the SVG, PDF, or PPTX document title. |
 | `--id-prefix <name>` | Prefix SVG definition IDs, default `gum`. |
 | `--precision <digits\|full>` | Output decimal places from 0 to 100, or `full`; default `10`. |
-| `--text-mode <path\|live>` | SVG text and math as glyph paths (default) or live text. PNG, kitty, and PDF always use paths. |
+| `--text-mode <path\|live>` | SVG text and math as glyph paths (default) or live text. PNG, kitty, PDF, PPTX, and MP4 always use paths. |
 | `--stats` | Print layout counters to stderr. |
 | `-h, --help` | Show command help. |
 
@@ -258,7 +260,7 @@ Kitty output displays inline in terminals that support the kitty graphics
 protocol and ends with a newline. An explicit `-f kitty` or an output filename
 ending in `.kitty` writes the same graphics sequence.
 
-Rendering defaults to dark for kitty and light for SVG, PNG, PDF, tree, and JSON.
+Rendering defaults to dark for kitty and light for SVG, PNG, PDF, PPTX, tree, and JSON.
 An explicit root `<Svg theme="light|dark">` overrides that default, and
 `--theme light|dark` overrides the source root theme. Nested themes and explicit
 colors in JSX still apply. Themes do not specify backgrounds. `--background`
@@ -270,18 +272,26 @@ PNG and kitty render fragments through `@gum-jsx/png` and tiny-skia WebAssembly.
 Outlined text, math, shapes, and embedded PNGs need no native addons or install
 scripts.
 `--text-mode live` preserves text and math as live SVG text. SVG viewers need
-matching fonts; the option does not embed or install them. PNG, kitty, and PDF
+matching fonts; the option does not embed or install them. PNG, kitty, PDF, and PPTX
 always request glyph outlines regardless of that flag. Emoji without outlines
 cannot be rasterized; export SVG to display them in a browser with suitable fonts.
 `--background` also fills any area of a PNG crop outside the figure viewport.
 
-PDF uses `@gum-jsx/pdf`, loaded only for this format. It writes vector
+PDF uses `@gum-jsx/pdf`. It writes vector
 pages sized to their viewports at 96 pixels per inch (0.75 PDF points per pixel).
 `--ratio` and `--id-prefix` do not affect PDF output. Text and math remain
 outlines, so they are not searchable or selectable; debug overlays are omitted.
 `--title` sets PDF document metadata. Named, hex, RGB, and HSL colors are supported;
 unsupported paint expressions fail with an error. See the
 [PDF API documentation](https://github.com/CompendiumLabs/gum-jsx-pdf/blob/master/README.md) for format limits.
+
+PPTX uses `@gum-jsx/pptx` to write native vector shapes and embedded PNG pictures.
+Use `gum figure.jsx -o figure.pptx` or `gum slides/ -o talk.pptx`. Text and math
+remain glyph outlines. Slides have a white base, must share one size, and must
+measure 96–5376 pixels per side at the default physical scale. Active nested
+clipping, live text, skewed images, nonuniformly transformed strokes, and combined
+fill/stroke opacity are deferred and produce clear errors. `--ratio`, `--precision`,
+and `--id-prefix` do not affect PPTX. See the [PPTX API](../gum-jsx-pptx/README.md).
 
 `--precision` sets the decimal places used in SVG, PDF, and tree numeric output;
 PNG and kitty rendering use the full layout geometry. Choose an integer from
@@ -295,18 +305,51 @@ Run `bun run typecheck` here to check the CLI, or from the workspace root to
 check all packages. Run `bun run test` here for command integration tests, also included in the
 workspace test command.
 
-## Multipage PDFs and decks
+## MP4 animations
 
-Pass JSX files in page order or one directory containing slides to render a multipage PDF:
+Return a video description from a JSX source: `size: [width, height]`, `fps`,
+`duration` in seconds, optional `background`, and a synchronous
+`frame: ({time, frame, fps}) => element` function. Core, math, map, and plugin
+bindings remain available, plus `lerp`, `progress`, and `ease_in_out` helpers.
+
+```sh
+gum orbit.jsx -o orbit.mp4                # Export the complete animation
+gum orbit.jsx -f mp4 > orbit.mp4          # Stream MP4 to stdout
+gum orbit.jsx --time 1.5                 # Kitty preview (defaults to time 0)
+gum orbit.jsx --time 1.5 -o frame.png     # Save a frame
+gum orbit.jsx -o orbit.mp4 --qp 16        # Higher quality (default quantizer: 18)
+```
+
+Frame previews also support SVG, PDF, PPTX, tree, and JSON output. `--time`
+selects `floor(time * fps)` and must be nonnegative and less than the duration.
+Omit it when exporting MP4. `-W`, `-H`, `--theme`, and `--background` override the
+video's viewport and appearance; previews use the same source dimensions and
+background as the movie. MP4 requires even dimensions from 2 to 4096.
+
+Encoding uses the bundled `@gum-jsx/mp4` Rust/WASM backend; FFmpeg is not needed.
+`--qp` accepts integers 10–51, with lower values giving larger, higher-quality
+files. Output is H.264 in fragmented MP4, with no audio. Directory and multi-file
+inputs remain PDF/PPTX only. MP4 does not support `--ratio`, `--select`, or
+`--stats`; use `-W`/`-H` for video dimensions. File exports preserve an existing
+destination on failure; stdout may contain a partial stream if rendering fails.
+
+See the [MP4 package](https://github.com/CompendiumLabs/gum-jsx-mp4) for the source
+format, encoder API, and limitations.
+
+## PDF and PowerPoint decks
+
+Pass JSX files in slide order or one directory containing slides to render a PDF or PPTX:
 
 ```sh
 gum intro.jsx figure.jsx conclusion.jsx -o talk.pdf
 gum slides/ -o talk.pdf
+gum slides/ -o talk.pptx
 gum slides/ > talk.pdf
 ```
 
-Directories and multiple files default to PDF; other output formats are rejected. Each slide
-becomes one page with its own viewport size; `-W` and `-H` apply to every page.
+Directories and multiple files default to PDF and also accept PPTX. PDF pages
+retain their own viewport sizes; PPTX slides must all have the same size.
+`-W` and `-H` apply to every slide.
 Long content is not automatically split across pages. Directories and stdin
 cannot be combined with other inputs.
 
@@ -323,7 +366,7 @@ A directory can contain an optional `index.json`:
 All fields are optional. Without `slides`, Gum uses the directory's `.jsx` files
 in natural filename order (`slide_2.jsx` before `slide_10.jsx`), excluding the
 named prelude. It does not recurse into subdirectories. Manifest paths are
-relative to the directory. `title` supplies PDF metadata unless `--title`
+relative to the directory. `title` supplies PDF/PPTX metadata unless `--title`
 overrides it.
 
 The prelude contains shared declarations, such as colors, data, and JSX helpers:

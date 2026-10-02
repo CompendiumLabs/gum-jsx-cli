@@ -5,7 +5,7 @@ import { Command, Option, InvalidArgumentError } from 'commander'
 import type { OutputPrecision, ThemeName, TextRenderMode } from '@gum-jsx/core'
 import type { PngEncoding, RasterSelection } from '@gum-jsx/png'
 
-const FORMATS = ['kitty', 'svg', 'png', 'pdf', 'tree', 'json'] as const
+const FORMATS = ['kitty', 'svg', 'png', 'pdf', 'pptx', 'mp4', 'tree', 'json'] as const
 type Format = typeof FORMATS[number]
 
 type RenderOptions = {
@@ -23,6 +23,8 @@ type RenderOptions = {
   idPrefix: string
   precision?: OutputPrecision
   stats?: boolean
+  time?: number
+  qp?: number
 }
 
 type DeckIndex = {
@@ -31,7 +33,7 @@ type DeckIndex = {
   slides?: string[]
 }
 
-type DeckInput = { multi: true; deck: DeckIndex }
+type DeckInput = { multi: true; format: 'pdf' | 'pptx'; deck: DeckIndex }
 type FileInput = { multi: false;  format: Format; file: string }
 type GumInput = FileInput | DeckInput
 
@@ -56,6 +58,14 @@ function precision_option(value: string): OutputPrecision {
     throw new InvalidArgumentError('precision must be an integer from 0 to 100, or "full"')
   }
   return Number(value)
+}
+
+function qp_option(value: string): number {
+  const qp = number_option(value, 'qp')
+  if (!Number.isInteger(qp) || qp < 10 || qp > 51) {
+    throw new InvalidArgumentError('qp must be an integer from 10 to 51')
+  }
+  return qp
 }
 
 function selection_option(value: string): RasterSelection {
@@ -127,15 +137,22 @@ function validate_inputs(files: string[], values: RenderOptions): GumInput {
     throw new Error('Cannot mix stdin with multiple files')
   }
   const format = infer_format(values.format ?? ((hasDir || multiFile) && !values.output ? 'pdf' : undefined), values.output)
-  if (format !== 'pdf' && (hasDir || multiFile)) {
-    throw new Error('Directories and multiple files require PDF output')
+  if (format !== 'pdf' && format !== 'pptx' && (hasDir || multiFile)) {
+    throw new Error('Directories and multiple files require PDF or PPTX output')
+  }
+  if (values.qp !== undefined && format !== 'mp4') throw new Error('--qp requires MP4 output')
+  if (values.time !== undefined && (format === 'mp4' || hasDir || multiFile)) {
+    throw new Error('--time selects a frame from one video source; omit it for MP4 export')
+  }
+  if (format === 'mp4' && (values.select !== undefined || values.ratio !== 1 || values.stats)) {
+    throw new Error('MP4 does not support --select, --ratio, or --stats; use -W/-H to set its dimensions')
   }
 
   // two deck cases
   if (hasDir || multiFile) {
     const deck = hasDir ? index_deck(files[0]) :
       { slides: files, title: values.title }
-    return { multi: true, deck } as DeckInput
+    return { multi: true, format, deck } as DeckInput
   }
 
   // one file case
@@ -150,6 +167,8 @@ function output_options(program: Command): Command {
     .addOption(new Option('-f, --format <format>', 'Output format (default: kitty or output extension)')
       .choices(FORMATS))
     .option('-o, --output <file>', 'Write output to a file instead of stdout')
+    .option('--time <seconds>', 'Preview a frame from a video source (default: 0)', value => number_option(value, 'time'))
+    .option('--qp <number>', 'MP4 quantizer, 10–51; lower is higher quality (default: 18)', qp_option)
     .option('-W, --width <pixels>', 'Set the viewport width', value => number_option(value, 'width'))
     .option('-H, --height <pixels>', 'Set the viewport height', value => number_option(value, 'height'))
     .option('-r, --ratio <number>', 'PNG/kitty sampling ratio', ratio_option, 1)
@@ -159,10 +178,10 @@ function output_options(program: Command): Command {
     .option('-b, --background <color>', 'Paint the viewport background')
     .addOption(new Option('-t, --theme <theme>', 'Render theme (default: source theme, or dark for kitty / light otherwise)')
       .choices(['light', 'dark']))
-    .option('--title <text>', 'Set the SVG or PDF document title')
+    .option('--title <text>', 'Set the SVG, PDF, or PPTX document title')
     .option('--id-prefix <name>', 'Prefix SVG definition IDs', 'gum')
     .option('--precision <digits|full>', 'Output decimal places (0–100; default: 10)', precision_option)
-    .addOption(new Option('--text-mode <mode>', 'Text and math in SVG (PNG, kitty, and PDF always use paths)')
+    .addOption(new Option('--text-mode <mode>', 'Text and math in SVG (PNG, kitty, PDF, PPTX, and MP4 always use paths)')
       .choices(['path', 'live']).default('path'))
     .option('--stats', 'Print layout counters to stderr')
 }

@@ -53,6 +53,15 @@ test('standalone embeds text, math, map data, and rasterizer with matching outpu
     const args = ['-f', format]
     expect(await render(true, args, source)).toEqual(await render(false, args, source))
   }
+  // Active map clipping is outside the initial PPTX subset. Check its bundled
+  // vector and font paths on an ordinary slide instead.
+  const pptx = `<Svg width={px(320)} height={px(180)}>
+    <VStack>
+      <Text>PowerPoint</Text>
+      <Latex>x^2</Latex>
+    </VStack>
+  </Svg>`
+  expect(await render(true, ['-f', 'pptx'], pptx)).toEqual(await render(false, ['-f', 'pptx'], pptx))
   // The metrics-only fallback font must also be embedded.
   const emoji = '<Text>Hello 😀</Text>'
   expect(await render(true, ['-f', 'svg'], emoji)).toEqual(await render(false, ['-f', 'svg'], emoji))
@@ -65,6 +74,16 @@ test('standalone reads files, writes output, and renders decks outside the works
   await render(true, ['slides/one.jsx', '-o', 'one.svg'])
   expect(new Uint8Array(await Bun.file(join(scratch, 'one.svg')).arrayBuffer()))
     .toEqual(await render(false, ['slides/one.jsx', '-f', 'svg']))
+})
+
+test('standalone embeds the MP4 encoder and previews video frames without external tools', async () => {
+  const video = `return {
+    size:[64,48], fps:2, duration:1,
+    frame:({time}) => <Svg background={time ? 'blue' : 'red'} />,
+  }`
+  expect(await render(true, ['-f', 'mp4'], video)).toEqual(await render(false, ['-f', 'mp4'], video))
+  expect(await render(true, ['--time', '0.5', '-f', 'png'], video))
+    .toEqual(await render(false, ['--time', '0.5', '-f', 'png'], video))
 })
 
 test('standalone loads local TypeScript and installed package plugins', async () => {

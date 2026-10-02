@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { Evaluator } from '@gum-jsx/core'
 import { render_pdf } from '@gum-jsx/pdf'
+import { render_pptx } from '@gum-jsx/pptx'
 import { layout } from './render'
 
 import type { Fragment, LayoutPass } from '@gum-jsx/core'
@@ -19,15 +20,16 @@ function layout_deck(deck: DeckIndex, evaluator: Evaluator, options: LayoutOptio
     const src = readFileSync(file, 'utf8')
     const tree = evaluator.evaluate(src, { name: file, scope })
     const result = layout(tree, options)
-    if (result.kind !== 'fragment') throw new Error(`${file}: PDF pages must return a Gum element`)
+    if (result.kind !== 'fragment') throw new Error(`${file}: Deck slides must return a Gum element`)
     return result
   })
   return { results, title }
 }
 
-function render_deck(result: DeckResult, values: RenderOptions) {
+function render_deck(result: DeckResult, values: RenderOptions, format: 'pdf' | 'pptx' = 'pdf') {
   const { results, title } = result
-  const output = render_pdf(results.map(result => result.fragment), {
+  const render = format === 'pptx' ? render_pptx : render_pdf
+  const output = render(results.map(result => result.fragment), {
     background: values.background,
     title: values.title ?? title,
     precision: values.precision,
