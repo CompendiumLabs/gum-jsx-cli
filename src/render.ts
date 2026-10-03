@@ -7,7 +7,7 @@ import { render_pdf } from '@gum-jsx/pdf'
 import { render_pptx } from '@gum-jsx/pptx'
 import { format_image } from './kitty'
 
-import type { ThemeName, LayoutElementResult, TextRenderMode } from '@gum-jsx/core'
+import type { FontProvider, ThemeName, LayoutElementResult, TextRenderMode } from '@gum-jsx/core'
 import type { RenderOptions } from './args'
 
 const DEFAULT_WIDTH = 640
@@ -19,6 +19,7 @@ type LayoutOptions = {
   width?: number
   height?: number
   textMode?: TextRenderMode
+  fonts?: FontProvider
 }
 
 // Sources that return a plain value print it as text: strings verbatim, the rest as JSON.
@@ -28,7 +29,7 @@ function format_value(value: unknown): string {
 
 // A finite offer lets unsized figures lay out; it does not clip tall documents
 // or replace source dimensions. A single explicit axis leaves the other natural.
-function layout(value: unknown, { theme, defaultTheme, width, height, textMode }: LayoutOptions): LayoutElementResult {
+function layout(value: unknown, { theme, defaultTheme, width, height, textMode, fonts = createMathFonts() }: LayoutOptions): LayoutElementResult {
   const { width0, height0 } = (width === undefined && height === undefined) ?
     { width0: available(DEFAULT_WIDTH), height0: available(DEFAULT_HEIGHT) } :
     { width0: undefined, height0: undefined }
@@ -40,7 +41,7 @@ function layout(value: unknown, { theme, defaultTheme, width, height, textMode }
     request,
     defaults: { theme: defaultTheme },
     overrides: { theme },
-    fonts: createMathFonts(),
+    fonts,
     text_mode: textMode,
   })
 }
@@ -56,10 +57,12 @@ function render(result: LayoutElementResult, format: string, values: RenderOptio
   else if (format === 'pdf') {
     output = render_pdf(result.fragment, {
       background: values.background, title: values.title, precision: values.precision,
+      fonts: result.pass.resource<FontProvider>('fonts'),
     })
   }
   else if (format === 'pptx') {
-    output = render_pptx(result.fragment, { background: values.background, title: values.title })
+    output = render_pptx(result.fragment, { background: values.background, title: values.title,
+      fonts: result.pass.resource<FontProvider>('fonts') })
   }
   else if (format === 'png' || format === 'kitty') {
     const { fragment } = result

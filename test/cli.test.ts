@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { px, THEMES } from '@gum-jsx/core'
 import type { Fragment } from '@gum-jsx/core'
-import { mathToSvg } from '@gum-jsx/math'
+import { createMathFonts, mathToSvg } from '@gum-jsx/math'
 import { render_pdf } from '@gum-jsx/pdf'
 import { render_pptx } from '@gum-jsx/pptx'
 import { render_png } from '@gum-jsx/png'
@@ -147,7 +147,7 @@ test('PNG and kitty outline text regardless of SVG text mode; emoji report an er
   expect(await Bun.file(output).text()).toBe('keep me')
 })
 
-test('text mode defaults to paths and supports live prose and math while keeping PDF outlined', async () => {
+test('text mode supports live SVG and PDF prose and math, with optional outlines', async () => {
   const source = '<Text>Live <Span font-weight="bold">prose</Span> <Latex>x^2</Latex></Text>'
   const args = ['-f', 'svg', '-W', '320', '-H', '100']
   const standard = await cli(args, source, 'cli')
@@ -158,7 +158,7 @@ test('text mode defaults to paths and supports live prose and math while keeping
   expect(standard.text).not.toContain('<text ')
   expect(live.text).toContain('<text ')
   expect(live.text).toContain('font-weight="700"')
-  expect(live.text).toContain('>prose</text>')
+  expect(live.text).toContain('>prose </text>')
   expect(live.text).toContain('font-family="KaTeX_Math"')
   expect(live.text).not.toContain('<path ')
   const png = await cli(['-f', 'png', '--text-mode', 'live', '-W', '320', '-H', '100'], source, 'cli')
@@ -169,7 +169,9 @@ test('text mode defaults to paths and supports live prose and math while keeping
   expect(pdf.text).toStartWith('%PDF-')
   const outlinedPdf = await cli(['-f', 'pdf', '--text-mode', 'path'], source, 'cli')
   expect(outlinedPdf.code, outlinedPdf.error).toBe(0)
-  expect(pdf.bytes).toEqual(outlinedPdf.bytes)
+  expect(pdf.text).toContain('/FontFile2')
+  expect(pdf.text).toContain('/ToUnicode')
+  expect(outlinedPdf.text).not.toContain('/FontFile2')
   const invalid = await cli(['--text-mode', 'invalid'], '', 'cli')
   expect(invalid.code).toBe(1)
   expect(invalid.error).toContain('Allowed choices')
@@ -189,7 +191,7 @@ test('gum emits binary PDF from the laid-out fragment with shared render options
   for (const { entry, args, input } of pdfInputs) {
     for (const theme of [[], ['--theme', 'dark']]) {
       const options = [...args, ...theme]
-      const json = await cli([...options, '-f', 'json'], input, entry)
+      const json = await cli([...options, '-f', 'json', '--text-mode', 'live'], input, entry)
       expect(json.code).toBe(0)
       const fragment = JSON.parse(json.text) as Fragment
       const title = 'Gum (α) 🌱', background = '#369'
@@ -198,7 +200,7 @@ test('gum emits binary PDF from the laid-out fragment with shared render options
       expect(result.code).toBe(0)
       expect(result.text).toStartWith('%PDF-1.4\n')
       expect(result.text).toContain('/MediaBox [0 0 120 75]')
-      expect<Uint8Array>(result.bytes).toEqual(render_pdf(fragment, { title, background }))
+      expect<Uint8Array>(result.bytes).toEqual(render_pdf(fragment, { title, background, fonts: createMathFonts() }))
       expect(JSON.parse(result.error).layouts).toBeGreaterThan(0)
     }
   }
@@ -339,7 +341,7 @@ test('themes honor source selection, CLI overrides, and explicit JSX paints', as
     expect(fills).toContain(THEMES[theme].foreground)
     expect(fills).toContain('tomato')
     for (const inputs of [['theme-deck'], ['theme-deck/first.jsx', 'theme-deck/second.jsx']]) {
-      const deck = await cli([...inputs, ...args], '', 'cli')
+      const deck = await cli([...inputs, ...args, '--text-mode', 'path'], '', 'cli')
       expect(deck.code, deck.error).toBe(0)
       expect<Uint8Array>(deck.bytes).toEqual(render_pdf([fragment, fragment]))
     }
@@ -540,19 +542,19 @@ test('invalid decks and unsupported deck output fail without overwriting output'
   }
 })
 
-test('PPTX renders native vectors to stdout or inferred files with shared options', async () => {
+test('PPTX renders mixed text and vectors to stdout or inferred files with shared options', async () => {
   const source = `<Svg width={px(320)} height={px(180)}>
     <VStack>
       <Text>PowerPoint</Text>
       <Latex>x^2</Latex>
     </VStack>
   </Svg>`
-  const json = await cli(['-f', 'json'], source)
+  const json = await cli(['-f', 'json', '--text-mode', 'mixed'], source)
   expect(json.code, json.error).toBe(0)
-  const options = { title: 'Gum & PowerPoint', background: '#eee' }
+  const options = { title: 'Gum & PowerPoint', background: '#eee', fonts: createMathFonts() }
   const expected = render_pptx(JSON.parse(json.text), options)
   const args = ['--title', options.title, '--background', options.background]
-  const result = await cli(['-f', 'pptx', '--text-mode', 'live', '--stats', ...args], source)
+  const result = await cli(['-f', 'pptx', '--text-mode', 'mixed', '--stats', ...args], source)
   expect(result.code, result.error).toBe(0)
   expect<Uint8Array>(result.bytes).toEqual(expected)
   expect(JSON.parse(result.error).layouts).toBeGreaterThan(0)
@@ -582,24 +584,23 @@ test('PPTX decks use argument order or the existing manifest, prelude, and title
   }))
   const fragments = []
   for (const source of sources.toReversed()) {
-    const json = await cli(['-f', 'json'], 'const ink = "red";\nreturn ' + source)
+    const json = await cli(['-f', 'json', '--text-mode', 'mixed'], 'const ink = "red";\nreturn ' + source)
     expect(json.code, json.error).toBe(0)
     fragments.push(JSON.parse(json.text) as Fragment)
   }
   const result = await cli(['pptx-deck', '-o', 'deck.pptx'])
   expect(result.code, result.error).toBe(0)
   expect<Uint8Array>(new Uint8Array(await Bun.file(join(scratch, 'deck.pptx')).arrayBuffer()))
-    .toEqual(render_pptx(fragments, { title: 'PPTX deck' }))
+    .toEqual(render_pptx(fragments, { title: 'PPTX deck', fonts: createMathFonts() }))
   const ordered = await cli(['pptx-deck/second.jsx', 'pptx-deck/second.jsx', '-f', 'pptx', '--title', 'Two'])
   expect(ordered.code, ordered.error).toBe(0)
-  expect<Uint8Array>(ordered.bytes).toEqual(render_pptx([fragments[0], fragments[0]], { title: 'Two' }))
+  expect<Uint8Array>(ordered.bytes).toEqual(render_pptx([fragments[0], fragments[0]], { title: 'Two', fonts: createMathFonts() }))
 })
 
 test('PPTX rejects unsupported output without emitting bytes or replacing files', async () => {
   const output = join(scratch, 'protected.pptx')
   await Bun.write(output, 'keep me')
   for (const [source, message] of [
-    ['<Svg width={px(320)} height={px(180)}><Text>😀</Text></Svg>', 'live text is not supported'],
     ['<Svg width={px(20)} height={px(20)} />', '1–56 inches'],
   ]) {
     const result = await cli(['-o', output], source)

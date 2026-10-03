@@ -53,8 +53,7 @@ test('standalone embeds text, math, map data, and rasterizer with matching outpu
     const args = ['-f', format]
     expect(await render(true, args, source)).toEqual(await render(false, args, source))
   }
-  // Active map clipping is outside the initial PPTX subset. Check its bundled
-  // vector and font paths on an ordinary slide instead.
+  // Check bundled text and math output on a slide with explicit dimensions.
   const pptx = `<Svg width={px(320)} height={px(180)}>
     <VStack>
       <Text>PowerPoint</Text>

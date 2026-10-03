@@ -227,7 +227,7 @@ Run `gum [options] [files...]`:
 | `--title <text>` | Set the SVG, PDF, or PPTX document title. |
 | `--id-prefix <name>` | Prefix SVG definition IDs, default `gum`. |
 | `--precision <digits\|full>` | Output decimal places from 0 to 100, or `full`; default `10`. |
-| `--text-mode <path\|live>` | SVG text and math as glyph paths (default) or live text. PNG, kitty, PDF, PPTX, and MP4 always use paths. |
+| `--text-mode <path\|live\|mixed>` | Text and math in SVG/PDF/PPTX. `mixed` keeps prose live and math outlined. Defaults to `path` for SVG, `live` for PDF, and `mixed` for PPTX. PNG, kitty, and MP4 always use paths. |
 | `--stats` | Print layout counters to stderr. |
 | `-h, --help` | Show command help. |
 
@@ -272,24 +272,32 @@ PNG and kitty render fragments through `@gum-jsx/png` and tiny-skia WebAssembly.
 Outlined text, math, shapes, and embedded PNGs need no native addons or install
 scripts.
 `--text-mode live` preserves text and math as live SVG text. SVG viewers need
-matching fonts; the option does not embed or install them. PNG, kitty, PDF, and PPTX
+matching fonts; the option does not embed or install them in SVG. PNG and kitty
 always request glyph outlines regardless of that flag. Emoji without outlines
 cannot be rasterized; export SVG to display them in a browser with suitable fonts.
 `--background` also fills any area of a PNG crop outside the figure viewport.
 
 PDF uses `@gum-jsx/pdf`. It writes vector
 pages sized to their viewports at 96 pixels per inch (0.75 PDF points per pixel).
-`--ratio` and `--id-prefix` do not affect PDF output. Text and math remain
-outlines, so they are not searchable or selectable; debug overlays are omitted.
+`--ratio` and `--id-prefix` do not affect PDF output. Text and math glyphs default
+to selectable native text with embedded font subsets shared across all pages.
+`--text-mode path` exports outlines instead. Math decorations remain vector
+geometry, and copying formulas does not reconstruct TeX. Debug overlays are omitted.
 `--title` sets PDF document metadata. Named, hex, RGB, and HSL colors are supported;
 unsupported paint expressions fail with an error. See the
 [PDF API documentation](https://github.com/CompendiumLabs/gum-jsx-pdf/blob/master/README.md) for format limits.
 
 PPTX uses `@gum-jsx/pptx` to write native vector shapes and embedded PNG pictures.
-Use `gum figure.jsx -o figure.pptx` or `gum slides/ -o talk.pptx`. Text and math
-remain glyph outlines. Slides have a white base, must share one size, and must
-measure 96–5376 pixels per side at the default physical scale. Active nested
-clipping, live text, skewed images, nonuniformly transformed strokes, and combined
+Use `gum figure.jsx -o figure.pptx` or `gum slides/ -o talk.pptx`. The default
+`mixed` mode uses selectable, editable prose with fixed line breaks and styled
+runs, plus outlined math that needs no installed math fonts. Prose fonts are
+referenced without embedding; the viewer needs matching fonts. Use `--text-mode live`
+for editable math glyphs too, or `--text-mode path` for all outlines. Slides have a
+white base, must share one size, and must
+measure 96–5376 pixels per side at the default physical scale. Fragment clips are
+ignored, so content outside them is exported in full. Skewed images,
+reflected/skewed/nonuniformly scaled live text,
+nonuniformly transformed strokes, and combined
 fill/stroke opacity are deferred and produce clear errors. `--ratio`, `--precision`,
 and `--id-prefix` do not affect PPTX. See the [PPTX API](../gum-jsx-pptx/README.md).
 

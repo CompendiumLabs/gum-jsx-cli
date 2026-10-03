@@ -1,10 +1,11 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { Evaluator } from '@gum-jsx/core'
+import { createMathFonts } from '@gum-jsx/math'
 import { render_pdf } from '@gum-jsx/pdf'
 import { render_pptx } from '@gum-jsx/pptx'
 import { layout } from './render'
 
-import type { Fragment, LayoutPass } from '@gum-jsx/core'
+import type { FontProvider, Fragment, LayoutPass } from '@gum-jsx/core'
 import type { RenderOptions, DeckIndex } from './args'
 import type { LayoutOptions } from './render'
 
@@ -16,10 +17,11 @@ function layout_deck(deck: DeckIndex, evaluator: Evaluator, options: LayoutOptio
   const { title, prelude, slides = [] } = deck
   const scope = prelude === undefined ? undefined
     : evaluator.evaluate_prelude(readFileSync(prelude, 'utf8'), { name: prelude })
+  const fonts = options.fonts ?? createMathFonts()
   const results = slides.map(file => {
     const src = readFileSync(file, 'utf8')
     const tree = evaluator.evaluate(src, { name: file, scope })
-    const result = layout(tree, options)
+    const result = layout(tree, { ...options, fonts })
     if (result.kind !== 'fragment') throw new Error(`${file}: Deck slides must return a Gum element`)
     return result
   })
@@ -33,6 +35,7 @@ function render_deck(result: DeckResult, values: RenderOptions, format: 'pdf' | 
     background: values.background,
     title: values.title ?? title,
     precision: values.precision,
+    fonts: results[0]?.pass.resource<FontProvider>('fonts'),
   })
   if (values.output) {
     writeFileSync(values.output, output)

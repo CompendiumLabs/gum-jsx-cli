@@ -30,14 +30,16 @@ const program = output_options(program0)
     const evaluator = await create_evaluator(values.plugin)
     if (inputs.multi) {
       const { deck, format } = inputs
-      const options = { theme: values.theme, width: values.width, height: values.height }
+      const options: LayoutOptions = { theme: values.theme, width: values.width, height: values.height,
+        textMode: values.textMode ?? (format === 'pptx' ? 'mixed' : 'live') }
       const result = layout_deck(deck, evaluator, options)
       render_deck(result, values, format)
     } else {
       const { file, format } = inputs
       const defaultTheme = format == 'kitty' ? 'dark' : 'light'
       const options: LayoutOptions = { theme: values.theme, defaultTheme, width: values.width, height: values.height,
-        textMode: ['pdf', 'pptx', 'png', 'kitty'].includes(format) ? 'path' : values.textMode }
+        textMode: ['pdf', 'pptx'].includes(format) ? values.textMode ?? (format === 'pptx' ? 'mixed' : 'live')
+          : ['png', 'kitty'].includes(format) ? 'path' : values.textMode }
       const name = file === '-' ? 'stdin.jsx' : resolve(file)
       const source = readFileSync(file === '-' ? 0 : file, 'utf8')
       let tree = evaluator.evaluate(source, { name })
