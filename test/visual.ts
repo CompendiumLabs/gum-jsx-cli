@@ -4,6 +4,7 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve } from 'node:path'
 import { available, LayoutPass, layout_element, make_request, render_svg } from '@gum-jsx/core'
 import { createMathFonts } from '@gum-jsx/math'
+import { Video, create_renderer } from '@gum-jsx/mp4'
 import { create_evaluator } from '../src/plugins'
 import {
   elementsCodeDir,
@@ -71,7 +72,8 @@ function renderExample(group: string, path: string): Entry {
   try {
     if (!code.startsWith('// ')) throw new Error('Visual examples must start with a descriptive comment')
     const element = evaluator.evaluate(code, { name: path, seed: 1 })
-    const result = layout_element(element, {
+    const video = element instanceof Video ? create_renderer(element) : undefined
+    const result = video ? { kind: 'fragment', fragment: video.fragment(0) } : layout_element(element, {
       pass,
       request: make_request({ width: available(canvas.width), height: available(canvas.height) }),
     })
@@ -81,6 +83,7 @@ function renderExample(group: string, path: string): Entry {
       throw new Error(`Empty viewport: ${fragment.size.width} × ${fragment.size.height}`)
     }
     const svg = render_svg(fragment, {
+      background: video ? video.video.background ?? '#ffffff' : undefined,
       title: `${group}/${name}`,
       id_prefix: `visual_${group}_${name}`.replace(/[^A-Za-z0-9_.-]/g, '_'),
     })
