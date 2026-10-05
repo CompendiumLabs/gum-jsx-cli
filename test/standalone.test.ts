@@ -76,13 +76,18 @@ test('standalone reads files, writes output, and renders decks outside the works
 })
 
 test('standalone embeds the MP4 encoder and previews video frames without external tools', async () => {
-  const video = `return {
-    size:[64,48], fps:2, duration:1,
-    frame:({time}) => <Svg background={time ? 'blue' : 'red'} />,
-  }`
+  const video = `<Video
+    size={[64, 48]} fps={2} duration={1}
+    frame={({time}) => <Svg background={time ? 'blue' : 'red'} />}
+  />`
   expect(await render(true, ['-f', 'mp4'], video)).toEqual(await render(false, ['-f', 'mp4'], video))
   expect(await render(true, ['--time', '0.5', '-f', 'png'], video))
     .toEqual(await render(false, ['--time', '0.5', '-f', 'png'], video))
+  const frames = `<Video size={[64, 48]} fps={2}>
+    <Svg background="red" />
+    <Svg background="blue" />
+  </Video>`
+  expect(await render(true, ['-f', 'mp4'], frames)).toEqual(await render(false, ['-f', 'mp4'], video))
 })
 
 test('standalone loads JSON, CSV, and PNG files without installed dependencies', async () => {

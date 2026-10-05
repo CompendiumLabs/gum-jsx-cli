@@ -154,10 +154,10 @@ test('deck preludes and slides retain their own loader directories', async () =>
 
 test('video frame functions retain source-relative loaders after evaluation', async () => {
   await Bun.write(join(scratch, 'video', 'color.json'), '"red"')
-  await Bun.write(join(scratch, 'video', 'source.jsx'), `return {
-    size: [2, 1], fps: 1, duration: 1,
-    frame: () => <Svg background={loadJSON('./color.json')} />,
-  }`)
+  await Bun.write(join(scratch, 'video', 'source.jsx'), `<Video
+    size={[2, 1]} fps={1} duration={1}
+    frame={() => <Svg background={loadJSON('./color.json')} />}
+  />`)
   const result = await cli(['video/source.jsx', '--time', '0', '-f', 'svg'])
   expect(result.code, result.error).toBe(0)
   expect(result.text).toContain('fill="red"')

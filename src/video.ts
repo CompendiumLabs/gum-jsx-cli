@@ -1,24 +1,23 @@
 import { Element, make_viewport } from '@gum-jsx/core'
-import { render_mp4, validate_mp4 } from '@gum-jsx/mp4'
-import type { Video, FrameContext } from '@gum-jsx/mp4'
+import { Video, is_video, render_mp4, validate_mp4 } from '@gum-jsx/mp4'
+import type { FrameContext } from '@gum-jsx/mp4'
 import type { RenderOptions } from './args'
 
-function is_video(value: unknown): value is Video {
-  return value !== null && typeof value === 'object' && typeof (value as Video).frame === 'function'
-}
-
+// Apply CLI viewport defaults to either stored frames or a lazy generator.
 function prepare_video(value: unknown, options: RenderOptions): Video {
   const source = validate_mp4(value)
-  return validate_mp4({
-    ...source,
+  const viewport = (element: Element) => {
+    if (!(element instanceof Element)) throw new TypeError('Video.frame must return a Gum element')
+    return make_viewport(element, { defaults: { theme: 'light' }, overrides: { theme: options.theme } })
+  }
+  const props = {
     size: [options.width ?? source.size[0], options.height ?? source.size[1]],
+    fps: source.fps,
     background: options.background ?? source.background,
-    frame(context: FrameContext) {
-      const element = source.frame(context)
-      if (!(element instanceof Element)) throw new TypeError('video.frame must return a Gum element')
-      return make_viewport(element, { defaults: { theme: 'light' }, overrides: { theme: options.theme } })
-    },
-  })
+  } as const
+  return new Video(source.children
+    ? { ...props, children: source.children.map(viewport) }
+    : { ...props, duration: source.duration, frame: (context: FrameContext) => viewport(source.frame(context)) })
 }
 
 async function export_video(video: Video, options: RenderOptions): Promise<void> {

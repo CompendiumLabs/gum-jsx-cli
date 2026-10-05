@@ -359,10 +359,39 @@ workspace test command.
 
 ## MP4 animations
 
-Return a video description from a JSX source: `size: [width, height]`, `fps`,
-`duration` in seconds, optional `background`, and a synchronous
-`frame: ({time, frame, fps}) => element` function. Core, math, map, and plugin
-bindings remain available, plus `lerp`, `progress`, and `ease_in_out` helpers.
+Return a top-level `Video` component from a JSX source. Supply `size`, `fps`,
+`duration` in seconds, and a synchronous `frame` generator:
+
+```jsx
+return <Video
+  size={[640, 360]}
+  fps={30}
+  duration={3}
+  frame={({ time }) => (
+    <Box padding={em(1)}>
+      <Text>{time.toFixed(2)} seconds</Text>
+    </Box>
+  )}
+/>
+```
+
+Alternatively, pass frames as children:
+
+```jsx
+return (
+  <Video size={[640, 360]} fps={2}>
+    <Svg background="red" />
+    <Svg background="blue" />
+  </Video>
+)
+```
+
+Children can also be an array, as in `<Video size={[640, 360]} fps={2}>{frames}</Video>`.
+Each element occupies one frame; duration is the child count divided by `fps`,
+so omit `duration` and `frame` when supplying children. At least one frame is required.
+Both forms accept an optional `background`. Core, math, map, and plugin bindings
+remain available, plus `Video`, `lerp`, `progress`, and `ease_in_out`. The original
+generator-based video objects remain supported.
 
 ```sh
 gum orbit.jsx -o orbit.mp4                # Export the complete animation

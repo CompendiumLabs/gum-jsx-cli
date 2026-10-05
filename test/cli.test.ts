@@ -617,10 +617,12 @@ test('PPTX rejects unsupported output without emitting bytes or replacing files'
   expect(await Bun.file(output).text()).toBe('keep me')
 })
 
-const video_source = `return {
-  size: [64, 48], fps: 2, duration: 1,
-  frame: ({time}) => <Svg background={lerp(0, 1, ease_in_out(progress(time, 0, 1))) > 0 ? 'blue' : 'red'} />,
-}`
+const video_source = `<Video
+  size={[64, 48]} fps={2} duration={1}
+  frame={({time}) => (
+    <Svg background={lerp(0, 1, ease_in_out(progress(time, 0, 1))) > 0 ? 'blue' : 'red'} />
+  )}
+/>`
 
 test('gum exports MP4 from stdin to stdout, inferred files, and explicit-format files', async () => {
   const streamed = await cli(['-f', 'mp4'], video_source)
@@ -653,6 +655,26 @@ test('gum previews video frames as Kitty and PNG with declared dimensions', asyn
   expect(kitty.code, kitty.error).toBe(0)
   const encoded = [...kitty.text.matchAll(/\x1b_G[^;]*;([^\x1b]*)\x1b\\/g)].map(match => match[1]).join('')
   expect(new Uint8Array(Buffer.from(encoded, 'base64'))).toEqual(later.bytes)
+})
+
+test('Video frame children match generators in MP4 exports and frame previews', async () => {
+  const source = `<Video size={[64, 48]} fps={2}>
+    <Svg background="red" />
+    <Svg background="blue" />
+  </Video>`
+  for (const args of [
+    ['-f', 'mp4'],
+    ['-f', 'png', '--time', '0.75', '-W', '80', '-H', '60', '--theme', 'dark', '-b', '#123456'],
+  ]) {
+    const result = await cli(args, source)
+    const generated = await cli(args, video_source)
+    expect(result.code, result.error).toBe(0)
+    expect(generated.code, generated.error).toBe(0)
+    expect(result.bytes).toEqual(generated.bytes)
+  }
+  const past_end = await cli(['--time', '1'], source)
+  expect(past_end.code).toBe(1)
+  expect(past_end.error).toContain('--time must be less than the video duration')
 })
 
 test('video export honors viewport, theme, and background overrides', async () => {
