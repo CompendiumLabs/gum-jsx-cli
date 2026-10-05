@@ -186,8 +186,8 @@ function output_options(program: Command): Command {
     .option('--stats', 'Print layout counters to stderr')
 }
 
-async function run(program: Command): Promise<void> {
-  try { await program.parseAsync() }
+async function run(program: Command, args: string[]): Promise<void> {
+  try { await program.parseAsync(args, { from: 'user' }) }
   catch (error) {
     console.error(error instanceof Error ? error.message : String(error))
     process.exitCode = 1
