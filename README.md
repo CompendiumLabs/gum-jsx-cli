@@ -1,16 +1,10 @@
 # @gum-jsx/cli
 
+[Gum](https://github.com/CompendiumLabs/gum-jsx) — installation, quickstart, and user documentation.
+
 Command construction, JSX evaluation, layout, and rendering APIs for Gum.
 This is a source library for Bun or a compatible server-side bundler.
 Importing it does not parse arguments, consume stdin, or run a command.
-
-**To install the `gum` command, install [`gum-jsx`](../gum-jsx/README.md):**
-
-```sh
-npm install -g gum-jsx
-gum --version
-gum figure.jsx -o figure.png
-```
 
 The `gum-jsx` package owns executable entry points, npm bundles, standalone
 builds, and release archives. `@gum-jsx/cli` ships TypeScript source with its
