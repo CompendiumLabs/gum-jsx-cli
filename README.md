@@ -185,6 +185,50 @@ sizes. Start with the [Gum guide](https://github.com/CompendiumLabs/gum-jsx-docs
 and the [element examples](https://github.com/CompendiumLabs/gum-jsx-docs/tree/master/docs/elements/code)
 to build beyond this plot.
 
+## Load data and images
+
+CLI scripts can read local files synchronously with `loadJSON`, `loadCSV`, and
+`loadPNG`. Relative paths resolve from the JSX file's directory, or from the
+working directory when reading stdin. Absolute paths work too. Each deck slide
+and prelude uses its own directory; functions defined in a prelude retain that
+directory when a slide calls them.
+
+| Function | Result |
+|---|---|
+| `loadJSON(path)` | Any parsed JSON value: an object, array, or primitive. |
+| `loadCSV(path, options?)` | An array of row objects, with column names from the first row. |
+| `loadPNG(path)` | A base64 PNG data URL for `PngImage`, after checking the PNG header. |
+
+```jsx
+const config = loadJSON('./config.json')
+const rows = loadCSV('./measurements.csv')
+const photo = loadPNG('./photo.png')
+
+return (
+  <VStack>
+    <Text>{config.title}: {rows.length} observations</Text>
+    <PngImage data={photo} height={px(200)} />
+  </VStack>
+)
+```
+
+`loadCSV` uses [Papa Parse](https://www.papaparse.com/docs), skips empty lines,
+and defaults to `delimiter: ','` and `dynamicTyping: true`. Set
+`dynamicTyping: false` to keep every value as text, or select columns with an
+object or function. For example, this keeps leading zeros in an ID column while
+converting numeric measurements:
+
+```jsx
+const rows = loadCSV('./measurements.csv', {
+  delimiter: ';',
+  dynamicTyping: column => column !== 'id',
+})
+```
+
+Read and parsing failures throw an error containing the resolved filename.
+These helpers read filesystem paths, not remote URLs. They are included in both
+the npm CLI and standalone executable; CSV parsing needs no separate install.
+
 ## Take it further
 
 PNG and kitty output use fast lossless encoding by default. Set

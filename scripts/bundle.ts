@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url'
 export const root = fileURLToPath(new URL('../', import.meta.url))
 // Build dependencies whose code/assets ship in the CLI and need notices.
 export const bundled_dependencies = [
-  'commander', '@gum-jsx/core', '@gum-jsx/math', '@gum-jsx/maps', '@gum-jsx/pdf', '@gum-jsx/pptx', '@gum-jsx/png', '@gum-jsx/mp4',
+  'commander', 'papaparse', '@gum-jsx/core', '@gum-jsx/math', '@gum-jsx/maps',
+  '@gum-jsx/pdf', '@gum-jsx/pptx', '@gum-jsx/png', '@gum-jsx/mp4',
 ]
 
 // Match acorn-jsx's CommonJS entry to avoid bundling a second Acorn parser.

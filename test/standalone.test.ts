@@ -85,6 +85,22 @@ test('standalone embeds the MP4 encoder and previews video frames without extern
     .toEqual(await render(false, ['--time', '0.5', '-f', 'png'], video))
 })
 
+test('standalone loads JSON, CSV, and PNG files without installed dependencies', async () => {
+  const dir = join(scratch, 'data')
+  const png = await render(false, ['-f', 'png'], '<Rect width={px(2)} height={px(1)} fill="red" />')
+  await Bun.write(join(dir, 'photo.png'), png)
+  await Bun.write(join(dir, 'config.json'), '{"height":20}')
+  await Bun.write(join(dir, 'rows.csv'), 'id,value\n001,3\n')
+  await Bun.write(join(dir, 'source.jsx'), `
+    const config = loadJSON('./config.json')
+    const rows = loadCSV('./rows.csv', { dynamicTyping: { value: true } })
+    if (rows[0].id !== '001' || rows[0].value !== 3) throw new Error('CSV values differ')
+    return <PngImage data={loadPNG('./photo.png')} height={px(config.height)} />
+  `)
+  expect(await render(true, ['data/source.jsx', '-f', 'png']))
+    .toEqual(await render(false, ['data/source.jsx', '-f', 'png']))
+})
+
 test('standalone loads local TypeScript and installed package plugins', async () => {
   await Bun.write(join(scratch, 'helper.ts'), 'export const twice = (n: number) => n * 2')
   await Bun.write(join(scratch, 'node_modules/palette/package.json'),

@@ -24,8 +24,10 @@
   "devDependencies": {
     "fast-png": "^8.0.0",
     "@types/bun": "latest",
+    "@types/papaparse": "^5.5.2",
     "typescript": "^7",
     "commander": "^14.0.3",
+    "papaparse": "^5.7.0",
     "@gum-jsx/core": "2.0.0",
     "@gum-jsx/math": "2.0.0",
     "@gum-jsx/mp4": "0.1.0",

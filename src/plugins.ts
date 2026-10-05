@@ -2,6 +2,14 @@ import { Evaluator } from '@gum-jsx/core'
 import * as math from '@gum-jsx/math'
 import * as maps from '@gum-jsx/maps'
 import { lerp, progress, ease_in_out } from '@gum-jsx/mp4'
+import { file_loaders } from './files'
+import type { EvaluateOptions } from '@gum-jsx/core'
+
+// Fresh loaders retain each source's directory; plugins and explicit bindings can override them.
+function file_options(options: EvaluateOptions, defaults: EvaluateOptions): EvaluateOptions {
+  const loaders = file_loaders(options.name ?? defaults.name)
+  return { ...options, scope: { ...loaders, ...defaults.scope, ...options.scope } }
+}
 
 // Math and maps are bundled with the CLI; additional plugins come from the caller's project.
 async function create_evaluator(plugins: readonly string[] = []): Promise<Evaluator> {
@@ -21,7 +29,18 @@ async function create_evaluator(plugins: readonly string[] = []): Promise<Evalua
       throw new Error(`Cannot load plugin ${JSON.stringify(plugin)}: ${message}`, { cause })
     }
   }
-  return new Evaluator({ scope })
+  return new CliEvaluator({ scope })
+}
+
+// Keep file access in the CLI while sharing core evaluation and prelude behavior.
+class CliEvaluator extends Evaluator {
+  override evaluate(code: string, options: EvaluateOptions = {}): any {
+    return super.evaluate(code, file_options(options, this))
+  }
+
+  override evaluate_prelude(code: string, options: EvaluateOptions = {}): Record<string, unknown> {
+    return super.evaluate_prelude(code, file_options(options, this))
+  }
 }
 
 export { create_evaluator }
