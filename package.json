@@ -44,7 +44,7 @@
     "papaparse": "^5.7.0",
     "@gum-jsx/core": "2.0.0",
     "@gum-jsx/math": "2.0.0",
-    "@gum-jsx/mp4": "0.1.0",
+    "@gum-jsx/mp4": "2.0.0",
     "@gum-jsx/maps": "2.0.0",
     "@gum-jsx/pdf": "2.0.0",
     "@gum-jsx/pptx": "2.0.0",
