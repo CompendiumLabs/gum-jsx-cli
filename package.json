@@ -23,14 +23,12 @@
     "url": "git+https://github.com/CompendiumLabs/gum-jsx-cli.git"
   },
   "homepage": "https://github.com/CompendiumLabs/gum-jsx-cli#readme",
-  "bugs": {
-    "url": "https://github.com/CompendiumLabs/gum-jsx-cli/issues"
-  },
   "publishConfig": {
     "access": "public",
     "tag": "beta"
   },
   "engines": {
+    "node": ">=24",
     "bun": ">=1.4.2"
   },
   "files": [
