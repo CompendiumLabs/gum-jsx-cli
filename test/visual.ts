@@ -56,7 +56,8 @@ const fonts = createMathFonts()
 const evaluator = await create_evaluator()
 const pass = new LayoutPass({ fonts: { value: fonts, version: fonts.version } })
 
-function renderExample(group: string, path: string): Entry {
+// Render each page independently while retaining the complete example source.
+function render_example(group: string, path: string): Entry[] {
   const started = performance.now()
   const code = readFileSync(path, 'utf8')
   const name = basename(path, '.jsx')
@@ -71,33 +72,40 @@ function renderExample(group: string, path: string): Entry {
     if (!code.startsWith('// ')) throw new Error('Visual examples must start with a descriptive comment')
     const element = evaluator.evaluate(code, { name: path, seed: 1 })
     const video = element instanceof Video ? create_renderer(element) : undefined
-    const result = video ? { kind: 'fragment', fragment: video.fragment(0) } : layout_element(element, {
+    const result = video ? { kind: 'fragment' as const, fragment: video.fragment(0) } : layout_element(element, {
       pass,
       request: make_request({ width: available(canvas.width), height: available(canvas.height) }),
     })
-    if (result.kind !== 'fragment') throw new TypeError('Visual examples must return an element')
-    const { fragment } = result
-    if (!(fragment.size.width > 0 && fragment.size.height > 0)) {
-      throw new Error(`Empty viewport: ${fragment.size.width} × ${fragment.size.height}`)
-    }
-    const svg = render_svg(fragment, {
-      background: video ? video.video.background ?? '#ffffff' : undefined,
-      title: `${group}/${name}`,
-      id_prefix: `visual_${group}_${name}`.replace(/[^A-Za-z0-9_.-]/g, '_'),
+    if (result.kind === 'value') throw new TypeError('Visual examples must return an element or Document')
+    const pages = result.kind === 'document' ? result.pages : [result.fragment]
+    // Give each document page its own preview, dimensions, and SVG namespace.
+    return pages.map((fragment, index) => {
+      const suffix = pages.length > 1 ? `-page-${index + 1}` : ''
+      const id = `${base.id}${suffix}`
+      if (!(fragment.size.width > 0 && fragment.size.height > 0)) {
+        throw new Error(`Empty viewport: ${fragment.size.width} × ${fragment.size.height}`)
+      }
+      const svg = render_svg(fragment, {
+        background: video ? video.video.background ?? '#ffffff' : undefined,
+        title: id,
+        id_prefix: `visual_${id}`.replace(/[^A-Za-z0-9_.-]/g, '_'),
+      })
+      if (/NaN|Infinity/.test(svg)) throw new Error('Rendered SVG contains non-finite geometry')
+      if (!/<(?:path|rect|ellipse)\b/.test(svg)) throw new Error('Rendered SVG contains no drawing')
+      const entry: Entry = {
+        ...base,
+        id,
+        name: `${name}${suffix}`,
+        status: 'pass',
+        svg,
+        error: null,
+        width: fragment.size.width,
+        height: fragment.size.height,
+        duration: performance.now() - started,
+      }
+      console.log(`PASS ${entry.path} (${entry.width} × ${entry.height})`)
+      return entry
     })
-    if (/NaN|Infinity/.test(svg)) throw new Error('Rendered SVG contains non-finite geometry')
-    if (!/<(?:path|rect|ellipse)\b/.test(svg)) throw new Error('Rendered SVG contains no drawing')
-    const entry: Entry = {
-      ...base,
-      status: 'pass',
-      svg,
-      error: null,
-      width: fragment.size.width,
-      height: fragment.size.height,
-      duration: performance.now() - started,
-    }
-    console.log(`PASS ${entry.path} (${entry.width} × ${entry.height})`)
-    return entry
   } catch (error) {
     const entry: Entry = {
       ...base,
@@ -109,7 +117,7 @@ function renderExample(group: string, path: string): Entry {
       duration: performance.now() - started,
     }
     console.error(`FAIL ${entry.path}: ${entry.error?.split('\n')[0]}`)
-    return entry
+    return [entry]
   }
 }
 
@@ -125,7 +133,7 @@ const started = performance.now()
 const examples = groups.flatMap(({ name, dir }) => readdirSync(dir)
   .filter(file => file.endsWith('.jsx'))
   .sort(naturalCompare)
-  .map(file => renderExample(name, join(dir, file))))
+  .flatMap(file => render_example(name, join(dir, file))))
 const passed = examples.filter(entry => entry.status === 'pass').length
 const failed = examples.length - passed
 const manifest: Manifest = {

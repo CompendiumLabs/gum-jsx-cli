@@ -21,7 +21,7 @@ Create an entry point with an explicit version and arguments:
 ```ts
 import { run_cli } from '@gum-jsx/cli'
 
-await run_cli(process.argv.slice(2), '2.1.0-beta.0')
+await run_cli(process.argv.slice(2), '2.1.0-beta.1')
 ```
 
 `run_cli(args, version)` accepts user arguments without the runtime or script
