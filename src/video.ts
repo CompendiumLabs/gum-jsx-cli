@@ -1,6 +1,5 @@
 import { Element, make_viewport } from '@gum-jsx/core'
 import type { FontProvider } from '@gum-jsx/core'
-import type { MathFontProvider } from '@gum-jsx/math'
 import { Video, is_video, render_mp4, validate_mp4 } from '@gum-jsx/mp4'
 import type { FrameContext } from '@gum-jsx/mp4'
 import type { RenderOptions } from './args'
@@ -11,7 +10,7 @@ function prepare_video(value: unknown, options: RenderOptions): Video {
   const viewport = (element: Element) => {
     if (!(element instanceof Element)) throw new TypeError('Video.frame must return a Gum element')
     return make_viewport(element, {
-      defaults: { theme: 'light', font_family: options.defaultFont }, overrides: { theme: options.theme },
+      defaults: { theme: 'light' }, overrides: { theme: options.theme },
     })
   }
   const props = {
@@ -24,8 +23,7 @@ function prepare_video(value: unknown, options: RenderOptions): Video {
     : { ...props, duration: source.duration, frame: (context: FrameContext) => viewport(source.frame(context)) })
 }
 
-async function export_video(video: Video, options: RenderOptions, fonts: FontProvider,
-  math_fonts?: MathFontProvider): Promise<void> {
+async function export_video(video: Video, options: RenderOptions, fonts: FontProvider): Promise<void> {
   const controller = new AbortController()
   const cancel = () => controller.abort(new Error('Render cancelled'))
   const output_error = (error: Error) => controller.abort(error)
@@ -37,7 +35,7 @@ async function export_video(video: Video, options: RenderOptions, fonts: FontPro
     process.stdout.write(bytes, error => error ? reject(error) : resolve())
   })
   try {
-    await render_mp4(video, options.output ?? stdout, { qp: options.qp, signal: controller.signal, fonts, math_fonts })
+    await render_mp4(video, options.output ?? stdout, { qp: options.qp, signal: controller.signal, fonts })
   } finally {
     process.removeListener('SIGINT', cancel)
     process.removeListener('SIGTERM', cancel)

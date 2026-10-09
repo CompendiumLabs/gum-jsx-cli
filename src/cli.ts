@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { Command } from 'commander'
-import { createMathFonts, KatexMathFontProvider } from '@gum-jsx/math'
+import { createMathFonts } from '@gum-jsx/math'
 import { validate_inputs, output_options, run } from './args'
 import { layout, render } from './render'
 import { layout_deck, render_deck } from './deck'
@@ -14,7 +14,7 @@ import type { LayoutOptions } from './render'
 type CliOptions = RenderOptions & { plugin: string[]; font: string[] }
 
 // Load each face once per invocation; preserve bundled text and math families.
-function load_fonts(files: readonly string[], family?: string) {
+function load_fonts(files: readonly string[]) {
   const fonts = createMathFonts()
   for (const file of files) {
     try { fonts.register(readFileSync(resolve(file))) }
@@ -22,7 +22,6 @@ function load_fonts(files: readonly string[], family?: string) {
       throw new Error(`${file}: ${cause instanceof Error ? cause.message : cause}`, { cause })
     }
   }
-  if (family !== undefined) fonts.resolve(family, 400, 'normal')
   return fonts
 }
 
@@ -40,12 +39,10 @@ function create_cli(version: string): Command {
       (plugin: string, plugins: string[]) => [...plugins, plugin], [])
     .action(async (files: string[], values: CliOptions) => {
       const inputs = validate_inputs(files, values)
-      const fonts = load_fonts(values.font, values.defaultFont)
-      if (values.mathFont !== undefined) fonts.resolve(values.mathFont, 400, 'normal')
-      const math_fonts = values.mathFont === undefined ? undefined : new KatexMathFontProvider(values.mathFont)
+      const fonts = load_fonts(values.font)
       const evaluator = await create_evaluator(values.plugin)
       const options: LayoutOptions = { theme: values.theme, width: values.width, height: values.height,
-        fonts, math_fonts, defaultFont: values.defaultFont }
+        fonts }
       if (inputs.multi) {
         const { deck, format } = inputs
         options.textMode = values.textMode ?? (format === 'pptx' ? 'mixed' : 'live')
@@ -59,7 +56,7 @@ function create_cli(version: string): Command {
         const name = file === '-' ? 'stdin.jsx' : resolve(file)
         const source = readFileSync(file === '-' ? 0 : file, 'utf8')
         let tree = evaluator.evaluate(source, { name })
-        if (format === 'mp4') return export_video(prepare_video(tree, values), values, fonts, math_fonts)
+        if (format === 'mp4') return export_video(prepare_video(tree, values), values, fonts)
         if (is_video(tree)) {
           const video = prepare_video(tree, values)
           const time = values.time ?? 0

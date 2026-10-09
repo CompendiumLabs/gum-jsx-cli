@@ -55,21 +55,23 @@ Custom fonts use the same registry for layout and export. Byte registration
 infers family, weight, and style and returns the registered family name:
 
 ```ts
+import { Svg } from '@gum-jsx/core'
 import { createMathFonts } from '@gum-jsx/math'
 
 const fonts = createMathFonts()
 const family = fonts.register(await Bun.file('./Inter-Regular.ttf').arrayBuffer())
 fonts.register(await Bun.file('./Inter-Bold.ttf').arrayBuffer())
-const result = layout(element, { fonts, defaultFont: family })
+const source = new Svg({ font_family: family, children: element })
+const result = layout(source, { fonts })
 ```
 
-`defaultFont` is inherited wherever the source does not specify a family.
-The CLI equivalents are repeatable `--font <file>` and `--default-font <family>`;
-font paths resolve from the invoking directory. Loading extra faces preserves
-Plex and math fonts and does not itself change the default.
+The CLI loads faces with repeatable `--font <file>` options; paths resolve from
+the invoking directory. Set `font-family` on `Svg` or a nested element to select
+the family. Loading extra faces preserves Plex and math fonts and does not
+itself change the default.
 
-Use `--math-font <family>` to select a loaded font for ordinary math glyphs.
-The library equivalent is `layout(element, { fonts, math_fonts:
+Use the inherited `math-font` JSX prop to select a loaded font for ordinary math glyphs.
+Library callers can also use `layout(element, { fonts, math_fonts:
 new KatexMathFontProvider(family) })`, importing `KatexMathFontProvider` from
 `@gum-jsx/math`. Unicode italic and double-struck alphabets use the selected
 font when covered; other styles and missing glyphs retain KaTeX fallbacks.
