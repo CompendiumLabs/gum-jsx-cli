@@ -1,7 +1,8 @@
 import { writeFileSync } from 'node:fs'
-import { available, exact, make_request, layout_element, render_svg, inspect_fragment,
+import { LayoutPass, available, exact, make_request, layout_element, render_svg, inspect_fragment,
   DEFAULT_OUTPUT_PRECISION } from '@gum-jsx/core'
 import { createMathFonts } from '@gum-jsx/math'
+import type { MathFontProvider } from '@gum-jsx/math'
 import { render_png } from '@gum-jsx/png'
 import { render_pdf } from '@gum-jsx/pdf'
 import { render_pptx } from '@gum-jsx/pptx'
@@ -16,10 +17,12 @@ const DEFAULT_HEIGHT = 480
 type LayoutOptions = {
   theme?: ThemeName
   defaultTheme?: ThemeName
+  defaultFont?: string
   width?: number
   height?: number
   textMode?: TextRenderMode
   fonts?: FontProvider
+  math_fonts?: MathFontProvider
 }
 
 // Sources that return a plain value print it as text: strings verbatim, the rest as JSON.
@@ -29,7 +32,9 @@ function format_value(value: unknown): string {
 
 // A finite offer lets unsized figures lay out; it does not clip tall documents
 // or replace source dimensions. A single explicit axis leaves the other natural.
-function layout(value: unknown, { theme, defaultTheme, width, height, textMode, fonts = createMathFonts() }: LayoutOptions): LayoutElementResult {
+function layout(value: unknown, options: LayoutOptions): LayoutElementResult {
+  const { theme, defaultTheme, defaultFont, width, height, textMode, math_fonts,
+    fonts = createMathFonts() } = options
   const { width0, height0 } = (width === undefined && height === undefined) ?
     { width0: available(DEFAULT_WIDTH), height0: available(DEFAULT_HEIGHT) } :
     { width0: undefined, height0: undefined }
@@ -38,8 +43,9 @@ function layout(value: unknown, { theme, defaultTheme, width, height, textMode, 
     height: height === undefined ? height0 : exact(height),
   })
   return layout_element(value, {
+    pass: math_fonts ? new LayoutPass({ math_fonts: { value: math_fonts, version: 0 } }) : undefined,
     request,
-    defaults: { theme: defaultTheme },
+    defaults: { theme: defaultTheme, font_family: defaultFont },
     overrides: { theme },
     fonts,
     text_mode: textMode,

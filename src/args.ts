@@ -19,6 +19,8 @@ type RenderOptions = {
   select?: RasterSelection
   background?: string
   theme?: ThemeName
+  defaultFont?: string
+  mathFont?: string
   title?: string
   idPrefix: string
   precision?: OutputPrecision
@@ -178,6 +180,10 @@ function output_options(program: Command): Command {
     .option('-b, --background <color>', 'Paint the viewport background')
     .addOption(new Option('-t, --theme <theme>', 'Render theme (default: source theme, or dark for kitty / light otherwise)')
       .choices(['light', 'dark']))
+    .option('--font <file>', 'Load a font face using its family, weight, and style metadata (repeatable)',
+      (file: string, files: string[]) => [...files, file], [])
+    .option('--default-font <family>', 'Default text family where the source does not specify one (default: IBM Plex Sans)')
+    .option('--math-font <family>', 'Use a registered math font for ordinary glyphs, retaining KaTeX layout and size fonts')
     .option('--title <text>', 'Set the SVG, PDF, or PPTX document title')
     .option('--id-prefix <name>', 'Prefix SVG definition IDs', 'gum')
     .option('--precision <digits|full>', 'Output decimal places (0–100; default: 10)', precision_option)

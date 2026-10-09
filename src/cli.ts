@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { Command } from 'commander'
+import { createMathFonts, KatexMathFontProvider } from '@gum-jsx/math'
 import { validate_inputs, output_options, run } from './args'
 import { layout, render } from './render'
 import { layout_deck, render_deck } from './deck'
@@ -10,7 +11,20 @@ import { is_video, prepare_video, export_video } from './video'
 import type { RenderOptions } from './args'
 import type { LayoutOptions } from './render'
 
-type CliOptions = RenderOptions & { plugin: string[] }
+type CliOptions = RenderOptions & { plugin: string[]; font: string[] }
+
+// Load each face once per invocation; preserve bundled text and math families.
+function load_fonts(files: readonly string[], family?: string) {
+  const fonts = createMathFonts()
+  for (const file of files) {
+    try { fonts.register(readFileSync(resolve(file))) }
+    catch (cause) {
+      throw new Error(`${file}: ${cause instanceof Error ? cause.message : cause}`, { cause })
+    }
+  }
+  if (family !== undefined) fonts.resolve(family, 400, 'normal')
+  return fonts
+}
 
 // Create a fresh command so callers can customize it without parsing process arguments.
 function create_cli(version: string): Command {
@@ -26,23 +40,26 @@ function create_cli(version: string): Command {
       (plugin: string, plugins: string[]) => [...plugins, plugin], [])
     .action(async (files: string[], values: CliOptions) => {
       const inputs = validate_inputs(files, values)
+      const fonts = load_fonts(values.font, values.defaultFont)
+      if (values.mathFont !== undefined) fonts.resolve(values.mathFont, 400, 'normal')
+      const math_fonts = values.mathFont === undefined ? undefined : new KatexMathFontProvider(values.mathFont)
       const evaluator = await create_evaluator(values.plugin)
+      const options: LayoutOptions = { theme: values.theme, width: values.width, height: values.height,
+        fonts, math_fonts, defaultFont: values.defaultFont }
       if (inputs.multi) {
         const { deck, format } = inputs
-        const options: LayoutOptions = { theme: values.theme, width: values.width, height: values.height,
-          textMode: values.textMode ?? (format === 'pptx' ? 'mixed' : 'live') }
+        options.textMode = values.textMode ?? (format === 'pptx' ? 'mixed' : 'live')
         const result = layout_deck(deck, evaluator, options)
         render_deck(result, values, format)
       } else {
         const { file, format } = inputs
-        const defaultTheme = format == 'kitty' ? 'dark' : 'light'
-        const options: LayoutOptions = { theme: values.theme, defaultTheme, width: values.width, height: values.height,
-          textMode: ['pdf', 'pptx'].includes(format) ? values.textMode ?? (format === 'pptx' ? 'mixed' : 'live')
-            : ['png', 'kitty'].includes(format) ? 'path' : values.textMode }
+        options.defaultTheme = format == 'kitty' ? 'dark' : 'light'
+        options.textMode = ['pdf', 'pptx'].includes(format) ? values.textMode ?? (format === 'pptx' ? 'mixed' : 'live')
+          : ['png', 'kitty'].includes(format) ? 'path' : values.textMode
         const name = file === '-' ? 'stdin.jsx' : resolve(file)
         const source = readFileSync(file === '-' ? 0 : file, 'utf8')
         let tree = evaluator.evaluate(source, { name })
-        if (format === 'mp4') return export_video(prepare_video(tree, values), values)
+        if (format === 'mp4') return export_video(prepare_video(tree, values), values, fonts, math_fonts)
         if (is_video(tree)) {
           const video = prepare_video(tree, values)
           const time = values.time ?? 0

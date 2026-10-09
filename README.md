@@ -51,6 +51,31 @@ and the `LayoutOptions`, `RenderOptions`, and `DeckIndex` types.
 file loaders; optional plugins resolve from the caller's working directory.
 File access, rendering output, and plugin loading happen when these APIs run.
 
+Custom fonts use the same registry for layout and export. Byte registration
+infers family, weight, and style and returns the registered family name:
+
+```ts
+import { createMathFonts } from '@gum-jsx/math'
+
+const fonts = createMathFonts()
+const family = fonts.register(await Bun.file('./Inter-Regular.ttf').arrayBuffer())
+fonts.register(await Bun.file('./Inter-Bold.ttf').arrayBuffer())
+const result = layout(element, { fonts, defaultFont: family })
+```
+
+`defaultFont` is inherited wherever the source does not specify a family.
+The CLI equivalents are repeatable `--font <file>` and `--default-font <family>`;
+font paths resolve from the invoking directory. Loading extra faces preserves
+Plex and math fonts and does not itself change the default.
+
+Use `--math-font <family>` to select a loaded font for ordinary math glyphs.
+The library equivalent is `layout(element, { fonts, math_fonts:
+new KatexMathFontProvider(family) })`, importing `KatexMathFontProvider` from
+`@gum-jsx/math`. Unicode italic and double-struck alphabets use the selected
+font when covered; other styles and missing glyphs retain KaTeX fallbacks.
+KaTeX layout parameters and size fonts remain active. OpenType MATH tables
+are not read yet.
+
 The existing `@gum-jsx/cli/kitty` export provides PNG and raw RGBA terminal
 protocol encoders without importing command construction or renderers.
 
