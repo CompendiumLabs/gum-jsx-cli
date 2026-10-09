@@ -23,6 +23,7 @@ type RenderOptions = {
   idPrefix: string
   precision?: OutputPrecision
   stats?: boolean
+  page?: number
   time?: number
   qp?: number
 }
@@ -50,6 +51,15 @@ function ratio_option(value: string): number {
   const ratio = number_option(value, 'ratio')
   if (ratio === 0) throw new InvalidArgumentError('ratio must be positive')
   return ratio
+}
+
+// Human-facing page numbers start at one, independently of array indices.
+function page_option(value: string): number {
+  const page = number_option(value, 'page')
+  if (!Number.isSafeInteger(page) || page < 1) {
+    throw new InvalidArgumentError('page must be a positive integer')
+  }
+  return page
 }
 
 function precision_option(value: string): OutputPrecision {
@@ -141,6 +151,9 @@ function validate_inputs(files: string[], values: RenderOptions): GumInput {
     throw new Error('Directories and multiple files require PDF or PPTX output')
   }
   if (values.qp !== undefined && format !== 'mp4') throw new Error('--qp requires MP4 output')
+  if (values.page !== undefined && (format === 'mp4' || values.time !== undefined)) {
+    throw new Error('--page selects a document page; use --time for a video frame')
+  }
   if (values.time !== undefined && (format === 'mp4' || hasDir || multiFile)) {
     throw new Error('--time selects a frame from one video source; omit it for MP4 export')
   }
@@ -167,6 +180,7 @@ function output_options(program: Command): Command {
     .addOption(new Option('-f, --format <format>', 'Output format (default: kitty or output extension)')
       .choices(FORMATS))
     .option('-o, --output <file>', 'Write output to a file instead of stdout')
+    .option('--page <number>', 'Select one page (starting at 1) from a document', page_option)
     .option('--time <seconds>', 'Preview a frame from a video source (default: 0)', value => number_option(value, 'time'))
     .option('--qp <number>', 'MP4 quantizer, 10–51; lower is higher quality (default: 18)', qp_option)
     .option('-W, --width <pixels>', 'Set the viewport width', value => number_option(value, 'width'))

@@ -30,7 +30,7 @@ function create_cli(version: string): Command {
   const base = new Command()
     .name('gum')
     .version(version)
-    .description('Render JSX figures or MP4 animations from files or stdin, or a deck directory as PDF or PPTX. Unsized figures receive a 640 × 480 offer; source sizes and natural content sizes are retained.')
+    .description('Render JSX pages, documents, or MP4 animations from files or stdin, or a deck directory as PDF or PPTX. Unsized pages receive a 640 × 480 offer; source sizes and natural content sizes are retained.')
     .allowExcessArguments(false)
     .argument('[files...]', 'JSX files or one deck directory (omit or use - for stdin)', ['-'])
 

@@ -51,22 +51,29 @@ and the `LayoutOptions`, `RenderOptions`, and `DeckIndex` types.
 file loaders; optional plugins resolve from the caller's working directory.
 File access, rendering output, and plugin loading happen when these APIs run.
 
+Sources can also return `Document` containing explicit `Page` children. `layout`
+returns `kind: 'document'` with ordered page fragments, shared layout resources,
+and a title. `render` exports all pages to PDF or PPTX; its `page` option selects
+one page, starting at 1. SVG, PNG, and kitty require a selection when a document
+contains multiple pages. The command exposes this as `--page`. Document files
+can also appear in a deck, contributing their pages in order.
+
 Custom fonts use the same registry for layout and export. Byte registration
 infers family, weight, and style and returns the registered family name:
 
 ```ts
-import { Svg } from '@gum-jsx/core'
+import { Page } from '@gum-jsx/core'
 import { createMathFonts } from '@gum-jsx/math'
 
 const fonts = createMathFonts()
 const family = fonts.register(await Bun.file('./Inter-Regular.ttf').arrayBuffer())
 fonts.register(await Bun.file('./Inter-Bold.ttf').arrayBuffer())
-const source = new Svg({ font_family: family, children: element })
+const source = new Page({ font_family: family, children: element })
 const result = layout(source, { fonts })
 ```
 
 The CLI loads faces with repeatable `--font <file>` options; paths resolve from
-the invoking directory. Set `font-family` on `Svg` or a nested element to select
+the invoking directory. Set `font-family` on `Page` or a nested element to select
 the family. Loading extra faces preserves Plex and math fonts and does not
 itself change the default.
 
