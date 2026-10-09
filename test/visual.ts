@@ -10,7 +10,6 @@ import {
   elementsCodeDir,
   packageRoot as docsRoot,
   galleryCodeDir,
-  visualTestsCodeDir,
 } from '../../gum-jsx-docs/src/dirs'
 
 type Status = 'pass' | 'fail'
@@ -41,7 +40,6 @@ type Manifest = {
 const groups = [
   { name: 'elements', dir: elementsCodeDir },
   { name: 'gallery', dir: galleryCodeDir },
-  { name: 'visual', dir: visualTestsCodeDir },
 ] as const
 
 function naturalCompare(a: string, b: string): number {

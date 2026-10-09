@@ -87,12 +87,11 @@ Run `bun run test` for import, API, and library packaging checks, and
 `bun run typecheck` for TypeScript checks. Executable integration and fresh
 installation tests live in `../gum-jsx/test` and run with that package's suite.
 
-From the workspace root, `bun run visual-test` evaluates the documentation
-examples and focused visual regression cases. It checks evaluation, layout,
+From the workspace root, `bun run visual-report` evaluates the documentation
+examples. It checks evaluation, layout,
 viewports, geometry, and drawings, then writes a searchable report to
 `gum-jsx-cli/visual-report/dist/index.html`.
 
-`bun run visual-report` is an alias. Open the HTML directly or run
+Open the HTML directly or run
 `bun --filter @gum-jsx/cli visual-report:serve` for an HTTP preview. Pass
 `--output /some/directory` after the report script to change its destination.
-See [visual-report/README.md](visual-report/README.md).
